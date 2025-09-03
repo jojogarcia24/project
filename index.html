@@ -347,13 +347,6 @@
     document.getElementById('lightboxClose').onclick = closeLightbox;
     document.getElementById('lightboxPrev').onclick = ()=>{ lbIndex = (lbIndex-1+lbImages.length)%lbImages.length; updateLightbox(); };
     document.getElementById('lightboxNext').onclick = ()=>{ lbIndex = (lbIndex+1)%lbImages.length; updateLightbox(); };
-    window.addEventListener('keydown', (e)=>{
-      const lb=document.getElementById('lightbox');
-      if(!lb.classList.contains('show')) return;
-      if(e.key==='Escape') closeLightbox();
-      if(e.key==='ArrowRight') document.getElementById('lightboxNext').click();
-      if(e.key==='ArrowLeft') document.getElementById('lightboxPrev').click();
-    });
 
     // Haversine distance (miles)
     function haversine(lat1, lon1, lat2, lon2) {
@@ -412,50 +405,69 @@
       searchAndDisplayAmenities(p, 'schoolsList', 'school', 'schools');
     }
 
+    // ---------- SAFE COERCION ----------
+    function asText(v) {
+      if (v == null) return "";
+      if (typeof v === "string") return v;
+      if (Array.isArray(v)) {
+        return v.map(x =>
+          typeof x === "string" ? x :
+          (x && typeof x === "object" && "text" in x) ? String(x.text) :
+          (x && x.url) ? x.url :
+          String(x)
+        ).join(", ");
+      }
+      if (typeof v === "object") {
+        if ("text" in v) return String(v.text);
+        try { return JSON.stringify(v); } catch (e) { return String(v); }
+      }
+      return String(v);
+    }
+
     function populate(p){
       // Hero
       const hero = document.getElementById('heroBg');
-      const heroSrc = p.HeroImageURL || (p.GalleryURLsCSV && p.GalleryURLsCSV.split(',')[0]) || '';
+      const heroSrc = asText(p.HeroImageURL) || (asText(p.GalleryURLsCSV).split(',')[0] || '').trim();
       if (heroSrc) hero.style.backgroundImage = `url('${heroSrc}')`;
-      document.getElementById('projectName').textContent = p['Project Name'] || 'New Development';
-      document.getElementById('projectAddress').textContent = p.Address || 'Address not available';
+      document.getElementById('projectName').textContent = asText(p['Project Name']) || 'New Development';
+      document.getElementById('projectAddress').textContent = asText(p.Address) || 'Address not available';
 
       // Elite badge
-      const priceStr = p['Listing Price'] || '';
+      const priceStr = asText(p['Listing Price']);
       const num = Number(String(priceStr).replace(/[^0-9.]/g,''));
       if (num > 1000000) document.getElementById('eliteBadge').classList.remove('hidden');
       else document.getElementById('eliteBadge').classList.add('hidden');
 
       // At a Glance
       const gl = document.getElementById('glanceList'); gl.innerHTML = '';
-      const completionDate = p['Estimated Completion'] ? new Date(p['Estimated Completion']).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
-      const formattedPrice = p['Listing Price'] ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(String(p['Listing Price']).replace(/[^0-9.]/g,''))) : 'N/A';
+      const completionDate = p['Estimated Completion'] ? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+      const formattedPrice = priceStr ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
       const glanceData = {
-        'Status': p.Status || 'N/A',
+        'Status': asText(p.Status) || 'N/A',
         'Price': formattedPrice,
-        'Beds': p.Beds || 'N/A',
-        'Baths': p.Baths || 'N/A',
-        'Sq Footage': (p['Sq Footage'] ? `${p['Sq Footage']} sq ft` : 'N/A'),
+        'Beds': asText(p.Beds) || 'N/A',
+        'Baths': asText(p.Baths) || 'N/A',
+        'Sq Footage': (asText(p['Sq Footage']) ? `${asText(p['Sq Footage'])} sq ft` : 'N/A'),
         'Estimated Completion': completionDate
       };
       Object.entries(glanceData).forEach(([k,v])=>{ if (v && v !== 'N/A') { const li = document.createElement('li'); li.innerHTML = `<span>${k}</span><span>${v}</span>`; gl.appendChild(li); } });
-      if (p['Site Plans']) { const li = document.createElement('li'); li.innerHTML = `<span>Site Plan</span><a href="${p['Site Plans']}" target="_blank" class="btn">View Plan</a>`; gl.appendChild(li); }
+      if (asText(p['Site Plans'])) { const li = document.createElement('li'); li.innerHTML = `<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`; gl.appendChild(li); }
 
       // About
       const aboutHomeFull = document.getElementById('aboutFull');
-      const aboutText = p.Description || 'No description available for this property.';
-      aboutHomeFull.innerHTML = `<p class="about-line">${aboutText}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutText.replace(/'/g, "\\'")}</p>\`)">Read More</button>`;
+      const aboutTextHome = asText(p.Description) || 'No description available for this property.';
+      aboutHomeFull.innerHTML = `<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g, "\\'")}</p>\`)">Read More</button>`;
 
       // Gallery
-      lbImages = (p.GalleryURLsCSV || '').split(',').map(s => s.trim()).filter(Boolean);
+      lbImages = asText(p.GalleryURLsCSV).split(',').map(s => s.trim()).filter(Boolean);
       const galleryThumbsContainer = document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML = '';
       if (lbImages.length > 0) { updateMainImage(0); } else { mainGalleryImg.src = 'https://via.placeholder.com/800x450?text=No+Images+Available'; mainGalleryImg.alt='No images available'; }
       lbImages.forEach((src, i) => { const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick = () => openLightbox(i); });
 
       // Builder
-      const builderNames = (p['Builder Owners'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const builderPhotos = (p['Builder Photo'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const builderTitles = (p['Builder Owner Titles'] || '').split(',').map(s => s.trim()).filter(Boolean);
+      const builderNames  = asText(p['Builder Owners']).split(',').map(s => s.trim()).filter(Boolean);
+      const builderPhotos = asText(p['Builder Photo']).split(',').map(s => s.trim()).filter(Boolean);
+      const builderTitles = asText(p['Builder Owner Titles']).split(',').map(s => s.trim()).filter(Boolean);
       const builderCardsContainer = document.getElementById('builderCards'); builderCardsContainer.innerHTML = '';
       if (builderNames.length === 0) { builderCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Builder information not available.</p>'; }
       builderNames.forEach((name, i) => {
@@ -477,21 +489,23 @@
         builderCardsContainer.innerHTML += cardHtml;
       });
 
-      // Agents
-      const agentNames = (p['Listing Agent 2'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const agentPhotos = (p['Agent Photo'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const agentEmails = (p['Agent Email'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const agentPhones = (p['Agent Phone Number'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const agentTitles = (p['Agent Title'] || '').split(',').map(s => s.trim()).filter(Boolean);
-      const fullAboutAgents = p['About Agent'] || '';
+      // Agents (SAFE)
+      const agentNames  = asText(p['Listing Agent 2']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentPhotos = asText(p['Agent Photo']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentEmails = asText(p['Agent Email']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentPhones = asText(p['Agent Phone Number']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentTitles = asText(p['Agent Title']).split(',').map(s => s.trim()).filter(Boolean);
+      const fullAboutAgents = asText(p['About Agent']) || 'No detailed bio available.';
+
       const agentCardsContainer = document.getElementById('agentCards'); agentCardsContainer.innerHTML = '';
       if (agentNames.length === 0) { agentCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Agent information not available.</p>'; }
       agentNames.forEach((name, i) => {
         const tel = (agentPhones[i] || '').replace(/[^0-9+]/g,'');
         const email = agentEmails[i] || '';
         const title = agentTitles[i] || 'Real Estate Agent';
-        const aboutText = (fullAboutAgents || 'No detailed bio available.');
-        const excerpt = aboutText.split('.')[0] + (aboutText.includes('.') ? '.' : '');
+        const aboutText = fullAboutAgents; // already coerced
+        const firstDot = aboutText.indexOf('.');
+        const excerpt = firstDot >= 0 ? aboutText.slice(0, firstDot + 1) : aboutText;
         const photoUrl = agentPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
         const cardHtml = `
           <div class="card reveal agent-card">
@@ -515,7 +529,9 @@
 
       // Media embeds
       const mediaEmbedsContainer = document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML = '';
-      const marketingVideoUrl = p['Marketing Video']; const preDrywallMatterportUrl = p['Pre Dry Wall Matterport']; const finalMatterportUrl = p['Final Matterport'];
+      const marketingVideoUrl = asText(p['Marketing Video']);
+      const preDrywallMatterportUrl = asText(p['Pre Dry Wall Matterport']);
+      const finalMatterportUrl = asText(p['Final Matterport']);
       let mediaContent = ''; let hasMedia = false;
       const matterportEmbeds = [];
       if (preDrywallMatterportUrl && preDrywallMatterportUrl !== 'N/A') {
