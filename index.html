@@ -457,9 +457,6 @@
     // NEW: normalize share links to embeddable URLs
     function toEmbed(raw){
       const url=(raw||"").trim(); if(!url) return "";
-      // Skip N/A values
-      if (url.toLowerCase() === 'n/a') return "";
-      
       // Matterport
       if(/matterport\.com/i.test(url)){
         const m=url.match(/[?&]m=([A-Za-z0-9]+)|\/show\/\?m=([A-Za-z0-9]+)/i);
@@ -508,44 +505,37 @@
       Object.entries(glanceData).forEach(([k,v])=>{
         if(v && v!=='N/A'){const li=document.createElement('li');li.innerHTML=`<span>${k}</span><span>${v}</span>`;gl.appendChild(li);}
       });
-      if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
+      const sitePlansStr = asText(p['Site Plans']);
+      let sitePlanLink = '';
+      if (sitePlansStr) {
+        const match = sitePlansStr.match(/(.*?)\s*\((https?:\/\/[^\s\)]+)\)/);
+        if (match) {
+          const name = match[1].trim() || 'View Plan';
+          const url = match[2];
+          sitePlanLink = `<a href="${url}" target="_blank" class="btn">${name}</a>`;
+        } else if (/https?:\/\//.test(sitePlansStr)) {
+          sitePlanLink = `<a href="${sitePlansStr}" target="_blank" class="btn">View Plan</a>`;
+        }
+        if (sitePlanLink) {
+          const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span>${sitePlanLink}`;gl.appendChild(li);
+        }
+      }
 
       // About home
       const aboutHomeFull=document.getElementById('aboutFull');
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
-      aboutHomeFull.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
+      aboutHomeFull.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'").replace(/\\n/g, '<br>')}</p>\`)">Read More</button>`;
 
-      // FIXED: Highlights & Amenities - Use separate fields and combine them
+      // Highlights & Amenities
       const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const highlights=asText(p.Highlights)||''; // Use 'Highlights' field
-      const amenities=asText(p.Amenities)||''; // Use 'Amenities' field
-      
-      // Combine highlights and amenities
-      const allItems = [];
-      if(highlights.trim()) {
-        // Split by newlines first, then by commas if no newlines
-        const highlightItems = highlights.includes('\n') ? 
-          highlights.split('\n').map(s => s.trim()).filter(Boolean) :
-          highlights.split(',').map(s => s.trim()).filter(Boolean);
-        allItems.push(...highlightItems);
-      }
-      if(amenities.trim()) {
-        // Split by newlines first, then by commas if no newlines  
-        const amenityItems = amenities.includes('\n') ? 
-          amenities.split('\n').map(s => s.trim()).filter(Boolean) :
-          amenities.split(',').map(s => s.trim()).filter(Boolean);
-        allItems.push(...amenityItems);
-      }
-      
-      if(allItems.length > 0) {
-        allItems.forEach(item => {
-          if(item.trim()) {
-            const li = document.createElement('li');
-            li.innerHTML = `<span>${item}</span>`;
-            highlightsList.appendChild(li);
-          }
+      const highlights = (asText(p.Highlights) + '\n\n' + asText(p.Amenities)).trim();
+      if(highlights){
+        highlights.split(/\n{2,}/).map(s=>s.trim()).filter(Boolean).forEach(item=>{
+          const li=document.createElement('li'); 
+          li.innerHTML=`<span>${item.replace(/\n/g, '<br>')}</span>`; 
+          highlightsList.appendChild(li);
         });
-      } else {
+      }else{
         highlightsList.innerHTML='<li><span>No highlights or amenities listed.</span></li>';
       }
 
@@ -575,43 +565,28 @@
               </div>
             </div>
             <p class="about-line">${aboutText}</p>
-            <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+            <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g,"\\'").replace(/\\n/g, '<br>')}</p>\`)">Read More</button>
           </div>`;
       });
 
-      // FIXED: Agents - Properly parse Listing Agent 2 field
-      const agentNamesRaw = asText(p['Listing Agent 2']);
-      const agentNames = agentNamesRaw ? agentNamesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
-      
+      // Agents
+      const agentNames=asText(p['Listing Agent 2']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentPhotos=asText(p['Agent Photo']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentEmails=asText(p['Agent Email']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentPhones=asText(p['Agent Phone Number']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentTitles=asText(p['Agent Title']).split(',').map(s=>s.trim()).filter(Boolean);
-      const agentAbout=asText(p['About Agent']).split(', ').filter(Boolean); // Split by comma-space for agent descriptions
-      
+      const aboutAgents = asText(p['About Agent']).split(/,\s*(?=[A-Z][a-z]+\s[A-Z][a-z]+\s+is)/);
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
       if(!agentNames.length){agentCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>';}
-      
       agentNames.forEach((name,i)=>{
         const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,'');
         const email=agentEmails[i]||'';
         const title=agentTitles[i]||'Real Estate Agent';
-        
-        // Use the actual agent description from CSV if available, otherwise use default
-        let aboutText = '';
-        if (agentAbout[i] && agentAbout[i].trim()) {
-          aboutText = agentAbout[i].trim();
-        } else if (name.toLowerCase().includes('joseph') || name.toLowerCase().includes('garcia')) {
-          aboutText = 'Joseph Garcia is a proud native Texan with more than 16 years experience in the Real Estate industry, dedicated to helping individuals and families find their dream home and the lifestyle they desire.';
-        } else if (name.toLowerCase().includes('cliff') || name.toLowerCase().includes('graham')) {  
-          aboutText = 'Cliff Graham is an accomplished Sales and Marketing professional with experience at Blue Chip companies like Procter & Gamble, Coca-Cola and PepsiCo, and a passionate Real Estate investor.';
-        } else {
-          aboutText = `${name} brings extensive expertise in real estate, focusing on personalized service and ensuring clients find their dream homes with ease and confidence.`;
-        }
-        
-        const excerpt = aboutText.split('.')[0] + '.';
+        const aboutText = (aboutAgents[i] || '').trim() || (name.toLowerCase().includes('cliff')
+          ? 'Cliff brings a wealth of experience in luxury real estate, focusing on client satisfaction and innovative marketing strategies.'
+          : 'Your expertise lies in personalized service, ensuring clients find their dream homes with ease and confidence.');
+        const excerpt = aboutText.replace(/\n/g, ' ').split(' ').slice(0, 30).join(' ') + '...';
         const photoUrl=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-        
         agentCardsContainer.innerHTML+=`
           <div class="card reveal agent-card">
             <div class="agent-top">
@@ -622,7 +597,7 @@
               </div>
             </div>
             <p class="about-line">${excerpt}</p>
-            <button class="btn" onclick="openModal('agentModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+            <button class="btn" onclick="openModal('agentModal', \`<p>${aboutText.replace(/'/g,"\\'").replace(/\\n/g, '<br>')}</p>\`)">Read More</button>
             <div class="agent-actions">
               ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${name}">📞&nbsp;Call</a>`:''}
               ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${name}">💬&nbsp;Text</a>`:''}
@@ -631,14 +606,13 @@
           </div>`;
       });
 
-      // FIXED: Media embeds — properly handle Matterport URLs
+      // Media embeds — two Matterports side-by-side, video below
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
       const pre = toEmbed(asText(p['Pre Dry Wall Matterport']));
       const fin = toEmbed(asText(p['Final Matterport']));
       const vid = toEmbed(asText(p['Marketing Video']));
-      
       let html=''; const mp=[];
-      if(pre && pre.trim()){
+      if(pre && pre.startsWith('https://')){
         mp.push(`
           <div class="card reveal">
             <h3>Pre Dry Wall Matterport</h3>
@@ -648,7 +622,7 @@
             </div>
           </div>`);
       }
-      if(fin && fin.trim()){
+      if(fin && fin.startsWith('https://')){
         mp.push(`
           <div class="card reveal">
             <h3>Final Matterport</h3>
@@ -659,7 +633,7 @@
           </div>`);
       }
       if(mp.length){ html += `<h3>Virtual Tours</h3><div class="matterport-grid">${mp.join('')}</div>`; }
-      if(vid && vid.trim()){
+      if(vid && vid.startsWith('https://')){
         html += `
           <div class="card reveal marketing-video">
             <h3>Video Tour</h3>
