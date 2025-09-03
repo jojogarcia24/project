@@ -1,195 +1,173 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Elite Projects • Developments</title>
-
-  <!-- Fonts & Leaflet -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-
   <style>
-    /* ====== THEME ====== */
-    :root{
-      --bg:#0a0a0a; --panel:#1a1a1a; --glass:rgba(255,255,255,.08);
-      --text:#e0e6f0; --muted:#aab8d0; --brand:#66b3ff; --accent:#00e6b8;
-      --border:#2c2c2c; --glow-brand:rgba(102,179,255,.4); --glow-accent:rgba(0,230,184,.4);
-      --shadow-dark:rgba(0,0,0,.6); --shadow-light:rgba(255,255,255,.03);
+    :root {
+      --bg: #0a0a0a;
+      --panel: #1a1a1a;
+      --glass: rgba(255,255,255,0.08);
+      --text: #e0e6f0;
+      --muted: #aab8d0;
+      --brand: #66b3ff;
+      --accent: #00e6b8;
+      --border: #2c2c2c;
+      --glow-brand: rgba(102,179,255,.4);
+      --glow-accent: rgba(0,230,184,.4);
+      --shadow-dark: rgba(0,0,0,0.6);
+      --shadow-light: rgba(255,255,255,0.03);
     }
-    *{box-sizing:border-box}
-    html,body{
-      margin:0; padding:0; background:var(--bg); color:var(--text);
-      font-family:'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
-      line-height:1.6; scroll-behavior:smooth;
+    * { box-sizing: border-box }
+    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; scroll-behavior: smooth; }
+    a { color: var(--brand); text-decoration: none; transition: color .2s ease }
+    a:hover { color: var(--accent) }
+    .site-header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; position:sticky; top:0; z-index:100; background:linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.7) 60%, transparent); box-shadow: 0 4px 20px var(--shadow-dark); backdrop-filter: blur(5px); width: 100%; }
+    .logo { height:55px; transition: filter .3s ease; }
+    .logo:hover { filter: drop-shadow(0 0 10px var(--glow-brand)); }
+    .main-nav .nav-link { margin-left:22px; color:var(--text); opacity:.9; font-weight: 500; position: relative; padding-bottom: 4px; }
+    .main-nav .nav-link:hover { opacity:1; }
+    .main-nav .nav-link::after { content: ''; position: absolute; left: 0; bottom: 0; width: 0%; height: 2px; background-color: var(--brand); transition: width .3s ease-out; }
+    .main-nav .nav-link:hover::after { width: 100%; }
+    .hero { position:relative; height:50vh; min-height:400px; overflow:hidden; border-bottom:1px solid var(--border); display: flex; align-items: flex-end; padding: 30px; width: 100%; }
+    .hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:brightness(.65); animation: zoompan 35s infinite alternate ease-in-out; transform-origin: center center; width: 100%; height: 100%; }
+    .hero-overlay { position:absolute; inset:0; background: radial-gradient(1000px 500px at 20% 20%, var(--glow-brand), transparent 70%), radial-gradient(1000px 500px at 80% 60%, var(--glow-accent), transparent 70%); }
+    .hero-content { position:relative; z-index: 5; text-shadow: 0 4px 12px var(--shadow-dark); width: 100%; max-width: 100%; }
+    .title-xl { font-size:clamp(32px, 6vw, 56px); font-family: 'Orbitron', sans-serif; margin:0 0 8px; line-height: 1.1; color: #ffffff; }
+    .subtitle { color:var(--muted); margin:0; font-size: 1.1em; }
+    .elite-badge { display:inline-block; position:absolute; top:28px; right:28px; padding:8px 14px; border:1px solid var(--border); border-radius:999px; background:rgba(0,0,0,.95); box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); color: #ffffff; font-weight: 600; animation: pulseGlow 2s infinite alternate ease-in-out; letter-spacing: 0.5px; }
+    .hidden { display:none }
+    .layout { display:grid; grid-template-columns: 350px 1fr; gap:24px; padding:24px; max-width: 1400px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+    @media (max-width: 980px) { 
+      .layout { grid-template-columns:1fr; padding:18px; } 
+      .hero { height:40vh; min-height:300px; padding:20px; } 
+      .site-header { padding:12px 16px; flex-wrap: wrap; gap: 12px; } 
+      .main-nav .nav-link { margin-left:14px; } 
     }
-    a{color:var(--brand);text-decoration:none;transition:color .2s ease}
-    a:hover{color:var(--accent)}
-
-    /* ====== HEADER (improved mobile) ====== */
-    .site-header{
-      display:flex; align-items:center; justify-content:space-between; gap:16px;
-      padding:14px 18px; position:sticky; top:0; z-index:100;
-      background:linear-gradient(180deg,rgba(0,0,0,.95),rgba(0,0,0,.7) 60%,transparent);
-      box-shadow:0 4px 20px var(--shadow-dark); backdrop-filter:blur(5px);
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; padding: 16px; }
+      .card-container { flex-direction: column; width: 100%; }
+      .card.builder-card, .card.agent-card { min-width: unset; width: 100%; }
+      .site-header { flex-direction: row; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+      .main-nav { margin-top: 0; display: flex; gap: 10px; flex-wrap: wrap; }
+      .main-nav .nav-link { margin: 0 5px; font-size: 0.9em; }
+      .elite-badge { top: 15px; right: 15px; padding: 6px 10px; font-size: 0.9em; }
+      .title-xl { font-size: clamp(28px, 8vw, 48px); }
+      .subtitle { font-size: 0.9em; }
+      .gallery-main-img { height: 300px; width: 100%; }
+      .embed { padding-top: 75%; }
+      .matterport-grid { grid-template-columns: 1fr; }
+      .media-section { width: 100%; }
     }
-    .logo{height:55px; transition:filter .3s ease}
-    .logo:hover{filter:drop-shadow(0 0 10px var(--glow-brand))}
-    .main-nav{display:flex; gap:14px; flex-wrap:wrap}
-    .main-nav .nav-link{color:var(--text); opacity:.9; font-weight:500; position:relative; padding-bottom:4px}
-    .main-nav .nav-link:hover{opacity:1}
-    .main-nav .nav-link::after{content:''; position:absolute; left:0; bottom:0; width:0; height:2px; background:var(--brand); transition:width .3s ease-out}
-    .main-nav .nav-link:hover::after{width:100%}
-
-    /* ====== HERO ====== */
-    .hero{position:relative; height:50vh; min-height:400px; overflow:hidden; border-bottom:1px solid var(--border); display:flex; align-items:flex-end; padding:30px}
-    .hero-bg{position:absolute; inset:0; background-size:cover; background-position:center; filter:brightness(.65); animation:zoompan 35s infinite alternate ease-in-out; transform-origin:center}
-    .hero-overlay{position:absolute; inset:0; background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%), radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
-    .hero-content{position:relative; z-index:5; text-shadow:0 4px 12px var(--shadow-dark)}
-    .title-xl{font-size:clamp(32px,6vw,56px); font-family:'Orbitron',sans-serif; margin:0 0 8px; line-height:1.1; color:#fff}
-    .subtitle{color:var(--muted); margin:0; font-size:1.1em}
-    .elite-badge{display:inline-block; position:absolute; top:22px; right:22px; padding:8px 14px; border:1px solid var(--border); border-radius:999px; background:rgba(0,0,0,.95); box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent); color:#fff; font-weight:600; animation:pulseGlow 2s infinite alternate ease-in-out; letter-spacing:.5px}
-    .hidden{display:none}
-
-    /* ====== LAYOUT ====== */
-    .layout{display:grid; grid-template-columns:350px 1fr; gap:24px; padding:24px; max-width:1400px; margin:0 auto}
-    @media (max-width:980px){
-      .layout{grid-template-columns:1fr; padding:18px}
-      .hero{height:42vh; min-height:300px; padding:20px}
-      .site-header{padding:12px 16px}
-      .main-nav{gap:10px}
+    @media (max-width: 480px) {
+      .site-header { padding: 10px 12px; }
+      .logo { height: 45px; }
+      .main-nav .nav-link { font-size: 0.85em; }
+      .hero { height: 35vh; min-height: 250px; padding: 15px; }
+      .title-xl { font-size: clamp(24px, 7vw, 40px); }
+      .subtitle { font-size: 0.85em; }
+      .card { padding: 16px; width: 100%; }
+      .gallery-main-img { height: 250px; width: 100%; }
+      .gallery-thumbs { width: 100%; }
+      .map { width: 100%; }
     }
-
-    /* ====== CARDS ====== */
-    .card{background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:20px; position:relative; overflow:hidden; margin-bottom:24px; box-shadow:0 6px 20px rgba(0,0,0,.3); transition:transform .3s ease, box-shadow .3s ease}
-    .card:hover{transform:translateY(-3px); box-shadow:0 10px 30px rgba(0,0,0,.4), 0 0 25px var(--glow-brand)}
-    .card h3{font-size:1.5em; margin:0 0 15px; color:#fff}
-    .glass{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04)); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,0.15)}
-    .card::before{content:""; position:absolute; inset:0; background:linear-gradient(90deg,transparent,rgba(102,179,255,.15) 50%,transparent); transform:translateX(-100%); transition:transform 1s ease-out; pointer-events:none; z-index:1}
-    .card.reveal.visible::before{transform:translateX(100%)}
-
-    /* ====== LISTS ====== */
-    .glance-list,.nearby-list{list-style:none; padding:0; margin:0}
-    .glance-list li{display:flex; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px dashed var(--border); font-size:1.05em}
-    .glance-list li:last-child{border-bottom:none}
-    .nearby-item{padding:10px 0; border-bottom:1px dashed var(--border)}
-    .nearby-item:last-child{border-bottom:none}
-    .nearby-item strong{display:block; color:var(--brand)}
-    .nearby-item p{margin:0; line-height:1.2}
-    .nearby-item small{color:var(--muted); font-size:.9em}
-
-    /* ====== GALLERY ====== */
-    .gallery-main-img-wrap{position:relative; margin-bottom:15px}
-    .gallery-main-img{width:100%; height:450px; object-fit:cover; border-radius:14px; border:1px solid var(--border); box-shadow:0 8px 25px rgba(0,0,0,.4)}
-    .gallery-thumbs{display:flex; gap:12px; overflow-x:auto; padding:10px 0; -webkit-overflow-scrolling:touch; scrollbar-width:thin; scrollbar-color:var(--brand) var(--panel)}
-    .gallery-thumbs::-webkit-scrollbar{height:8px}
-    .gallery-thumbs::-webkit-scrollbar-track{background:var(--panel); border-radius:10px}
-    .gallery-thumbs::-webkit-scrollbar-thumb{background:var(--brand); border-radius:10px}
-    .gallery-thumbs::-webkit-scrollbar-thumb:hover{background:var(--accent)}
-    .thumb{flex-shrink:0; width:130px; height:90px; border-radius:10px; overflow:hidden; cursor:pointer; border:2px solid transparent; transition:border-color .25s, box-shadow .25s, transform .25s; box-shadow:0 4px 10px rgba(0,0,0,.2)}
-    .thumb img{width:100%; height:100%; object-fit:cover}
-    .thumb:hover{border-color:var(--brand); box-shadow:0 0 15px var(--glow-brand); transform:translateY(-2px)}
-
-    /* ====== LIGHTBOX ====== */
-    .lightbox{display:none; position:fixed; inset:0; background:rgba(0,0,0,.95); align-items:center; justify-content:center; z-index:1000; opacity:0; transition:opacity .3s ease}
-    .lightbox.show{display:flex; opacity:1}
-    .lightbox img{max-width:85vw; max-height:85vh; border-radius:15px; border:2px solid var(--border); box-shadow:0 15px 50px rgba(0,0,0,.7),0 0 30px var(--glow-brand); transform:scale(.9); transition:transform .3s ease}
-    .lightbox.show img{transform:scale(1)}
-    .lightbox-arrow{position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.15); border:1px solid var(--border); padding:12px 16px; border-radius:12px; cursor:pointer; font-size:30px; color:#fff; transition:background .2s, border-color .2s, transform .2s}
-    .lightbox-arrow:hover{background:var(--brand); border-color:var(--brand); transform:translateY(-50%) scale(1.05)}
-    .lightbox-arrow.prev{left:25px} .lightbox-arrow.next{right:25px}
-    .modal-close{position:absolute; top:20px; right:20px; background:rgba(255,255,255,.15); border:1px solid var(--border); border-radius:12px; color:#fff; font-size:24px; padding:8px 14px; cursor:pointer; transition:background .2s, border-color .2s}
-    .modal-close:hover{background:var(--accent); border-color:var(--accent)}
-
-    /* ====== MAP ====== */
-    .map{height:400px; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    .card { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:20px; position:relative; overflow:hidden; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); transition: transform .3s ease, box-shadow .3s ease; width: 100%; max-width: 100%; }
+    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 25px var(--glow-brand); }
+    .card h3 { font-size: 1.5em; margin-top: 0; margin-bottom: 15px; color: #ffffff; }
+    .glass { background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); }
+    .card::before { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(90deg, transparent, rgba(102,179,255,.15) 50%, transparent); transform: translateX(-100%); transition: transform 1s ease-out; pointer-events: none; z-index: 1; }
+    .card.reveal.visible::before { transform: translateX(100%); }
+    .glance-list, .nearby-list, .highlights-list { list-style:none; padding:0; margin:0; width: 100%; }
+    .glance-list li, .highlights-list li { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-size: 1.05em; }
+    .glance-list li:last-child, .highlights-list li:last-child { border-bottom: none; }
+    .nearby-item { padding:10px 0; border-bottom:1px dashed var(--border); }
+    .nearby-item:last-child { border-bottom: none; }
+    .nearby-item strong { display:block; font-size: 1.1em; color: var(--brand); }
+    .nearby-item p { margin: 0; line-height: 1.2; }
+    .nearby-item small { color:var(--muted); font-size: 0.9em; }
+    .gallery-main-img-wrap { position: relative; margin-bottom: 15px; width: 100%; }
+    .gallery-main-img { width: 100%; height: 450px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
+    .gallery-thumbs { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--brand) var(--panel); width: 100%; }
+    .gallery-thumbs::-webkit-scrollbar { height: 8px; }
+    .gallery-thumbs::-webkit-scrollbar-track { background: var(--panel); border-radius: 10px; }
+    .gallery-thumbs::-webkit-scrollbar-thumb { background: var(--brand); border-radius: 10px; }
+    .gallery-thumbs::-webkit-scrollbar-thumb:hover { background: var(--accent); }
+    .thumb { flex-shrink: 0; width: 130px; height: 90px; border-radius: 10px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: border-color .25s ease, box-shadow .25s ease, transform .25s ease; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+    .thumb img { width:100%; height:100%; object-fit:cover; }
+    .thumb:hover { border-color: var(--brand); box-shadow: 0 0 15px var(--glow-brand); transform: translateY(-2px); }
+    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.95); align-items:center; justify-content:center; z-index:1000; opacity: 0; transition: opacity .3s ease; }
+    .lightbox.show { display:flex; opacity: 1; }
+    .lightbox img { max-width:85vw; max-height:85vh; border-radius:15px; border:2px solid var(--border); box-shadow:0 15px 50px rgba(0,0,0,.7), 0 0 30px var(--glow-brand); transform: scale(0.9); transition: transform .3s ease; }
+    .lightbox.show img { transform: scale(1); }
+    .lightbox-arrow { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.15); border:1px solid var(--border); padding:12px 16px; border-radius:12px; cursor:pointer; font-size:30px; color:#fff; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
+    .lightbox-arrow:hover { background:var(--brand); border-color:var(--brand); transform:translateY(-50%) scale(1.05); }
+    .lightbox-arrow.prev { left:25px } .lightbox-arrow.next{ right:25px }
+    .modal-close { position:absolute; top:20px; right:20px; background:rgba(255,255,255,.15); border:1px solid var(--border); border-radius:12px; color:#fff; font-size:24px; padding:8px 14px; cursor:pointer; transition: background .2s ease, border-color .2s ease; }
+    .modal-close:hover { background:var(--accent); border-color:var(--accent); }
+    .map { height:400px; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.3); width: 100%; }
     .leaflet-container{background:#0d101a}
-    .leaflet-control-attribution{background:rgba(0,0,0,.6); border:1px solid var(--border); border-radius:8px !important; color:#ccc !important; padding:4px 8px; font-size:.8em}
-    .leaflet-popup-content-wrapper{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:10px; box-shadow:0 5px 15px rgba(0,0,0,.4)}
+    .leaflet-control-attribution{background:rgba(0,0,0,.6); border:1px solid var(--border); border-radius:8px !important; color:#ccc !important; padding:4px 8px; font-size: 0.8em;}
+    .leaflet-popup-content-wrapper{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);}
     .leaflet-popup-tip{background:#1a1a1a}
-    .leaflet-control-zoom a{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:8px; transition:background .2s, color .2s}
-    .leaflet-control-zoom a:hover{background:var(--brand); color:#fff}
-
-    /* ====== MEDIA (matterport grid + video below) ====== */
-    .media-section h3{margin:14px 0}
-    .matterport-grid{display:grid; grid-template-columns:repeat(2,minmax(320px,1fr)); gap:24px}
-    .embed{position:relative; padding-top:56.25%; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow:0 6px 20px rgba(0,0,0,.3)}
-    .marketing-video .embed{padding-top:56.25%}
-    .embed iframe{position:absolute; inset:0; width:100%; height:100%; border:none}
-
-    /* ====== PEOPLE CARDS ====== */
-    .agent-top{display:flex; align-items:center; gap:15px; margin-bottom:12px}
-    .agent-avatar{width:60px; height:60px; border-radius:50%; border:2px solid var(--brand); object-fit:cover; box-shadow:0 0 15px rgba(0,0,0,.3)}
-    .agent-name{font-weight:600; font-size:1.2em; color:#fff}
-    .agent-tag{color:var(--muted); font-size:14px}
-    .agent-actions{display:flex; align-items:center; gap:12px; margin-top:15px; flex-wrap:wrap}
-    .icon-btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:10px 14px; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:14px; color:var(--text); font-size:1.05em; transition:background .2s, border-color .2s, transform .2s, box-shadow .2s}
-    .icon-btn:hover{background:var(--brand); border-color:var(--brand); color:#fff; transform:translateY(-2px); box-shadow:0 5px 15px var(--glow-brand)}
-    .card-container{display:flex; flex-wrap:wrap; gap:20px; justify-content:flex-start}
-    .card.builder-card,.card.agent-card{flex:1 1 320px; min-width:280px; display:flex; flex-direction:column}
-    .card.builder-card .btn,.card.agent-card .btn{width:100%; margin-top:auto}
-    .about-line{display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; margin-bottom:10px; line-height:1.5}
-
-    /* ====== BUTTONS ====== */
-    .btn{padding:12px 20px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); color:var(--text); cursor:pointer; font-size:1.05em; font-weight:500; transition:background .2s, border-color .2s, transform .2s, box-shadow .2s}
-    .btn:hover{border-color:var(--brand); background:var(--brand); color:#fff; transform:translateY(-2px); box-shadow:0 5px 15px var(--glow-brand)}
-    .btn:active{transform:translateY(0); box-shadow:0 2px 8px rgba(0,0,0,.3)}
-
-    /* ====== MODALS ====== */
-    .modal{position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:1000; opacity:0; transition:opacity .3s ease}
-    .modal.show{display:flex; opacity:1}
-    .modal-content{width:min(950px,95vw); max-height:90vh; overflow:auto; padding:25px; background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow:0 15px 50px rgba(0,0,0,.6), 0 0 40px var(--glow-brand); transform:translateY(20px) scale(.95); opacity:0; transition:transform .3s cubic-bezier(.34,1.56,.64,1), opacity .3s}
-    .modal.show .modal-content{transform:translateY(0) scale(1); opacity:1}
-    .modal-content h3{font-size:1.8em; color:#fff; margin-bottom:20px; border-bottom:1px solid var(--border); padding-bottom:10px}
-    .modal-content p{margin-bottom:15px; line-height:1.7}
-
-    /* ====== FOOTER ====== */
-    footer.legal-footer{border-top:1px solid var(--border); padding:40px 24px; background:#000; color:var(--muted); font-size:.9em}
-    .legal-wrap{max-width:1200px; margin:0 auto; display:flex; flex-direction:column}
-    .legal-grid{display:grid; grid-template-columns:1fr; gap:30px; margin-top:25px}
-    @media (min-width:900px){.legal-grid{grid-template-columns:1.5fr 1fr}}
-    .legal-section-title{font-weight:700; font-size:14px; margin-bottom:10px; color:var(--text); letter-spacing:.5px}
-    .legal-text{font-size:13px; color:#b0b0b0; line-height:1.8; margin:0}
-    .legal-list{list-style:none; padding:0; margin:0 0 10px 0}
-    .legal-list li{margin:8px 0; font-size:13px}
-    .legal-list a{color:var(--brand); text-decoration:underline; transition:color .2s}
-    .legal-list a:hover{color:var(--accent)}
-    .legal-note{font-size:13px; color:#9aa0a6; margin-top:10px}
-    .legal-updated{text-align:center; margin-top:30px; font-size:.85em; color:var(--muted); border-top:1px dashed var(--border); padding-top:20px}
-    .legal-links{text-align:center; margin-top:15px; font-size:.9em; color:var(--muted)}
-    .legal-links a{color:var(--brand); text-decoration:underline; margin:0 5px; transition:color .2s}
-    .legal-links a:hover{color:var(--accent)}
-
-    /* ====== REVEAL ====== */
-    .reveal{opacity:0; transform:translateY(20px); transition:opacity .7s ease-out, transform .7s ease-out}
-    .reveal.visible{opacity:1; transform:translateY(0)}
-
-    /* ====== ANIMATIONS ====== */
-    @keyframes zoompan{0%{transform:scale(1.05)}100%{transform:scale(1.15)}}
-    @keyframes pulseGlow{0%{box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent)}50%{box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 30px var(--glow-accent)}100%{box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent)}}
-
-    /* ====== EXTRA MOBILE SAFETY ====== */
-    @media (max-width:768px){
-      .layout{grid-template-columns:1fr; padding:16px}
-      .card-container{gap:14px}
-      .agent-actions{gap:8px}
-      .icon-btn{flex:1 1 120px}
-      .matterport-grid{grid-template-columns:1fr}
-      .marketing-video .embed{padding-top:62%}
-      .map{height:320px}
-      .gallery-main-img{height:300px}
-      .main-nav{width:100%; justify-content:space-between}
-      .elite-badge{top:12px; right:12px; padding:6px 10px; font-size:.9em}
-      .title-xl{font-size:clamp(28px,8vw,48px)}
-      .subtitle{font-size:.95em}
-    }
+    .leaflet-control-zoom a{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:8px; transition: background .2s ease, color .2s ease;}
+    .leaflet-control-zoom a:hover { background: var(--brand); color: #fff; }
+    .media-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px; width: 100%; }
+    .matterport-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap:24px; width: 100%; }
+    .marketing-video { margin-top: 24px; width: 100%; }
+    @media (max-width: 768px) { .matterport-grid { grid-template-columns: 1fr; } }
+    .embed { position:relative; padding-top:56.25%; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.3); width: 100%; }
+    .marketing-video .embed { padding-top: 56.25%; }
+    .embed iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
+    #sitePlan a.btn { display:block; text-align:center; margin-top: 15px; }
+    .agent-top { display:flex; align-items:center; gap:15px; margin-bottom: 12px; }
+    .agent-avatar { width:60px; height:60px; border-radius:50%; border:2px solid var(--brand); object-fit:cover; box-shadow: 0 0 15px rgba(0,0,0,0.3); }
+    .agent-name { font-weight:600; font-size: 1.2em; color: #ffffff; }
+    .agent-tag { color:var(--muted); font-size:14px; }
+    .agent-actions { display:flex; align-items:center; gap:12px; margin-top:15px; justify-content: center; }
+    .icon-btn { display:inline-flex; align-items:center; justify-content: center; gap:8px; padding:10px 14px; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:14px; color:var(--text); font-size: 1.1em; transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+    .icon-btn:hover { background:var(--brand); border-color:var(--brand); color: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--glow-brand); }
+    .icon-btn .badge { margin-left:6px; font-size:11px; padding:3px 8px; border:1px solid rgba(255,255,255,0.15); border-radius:999px; background:rgba(255,255,255,.08); color: var(--accent); }
+    .card-container { display:flex; flex-wrap:wrap; gap:20px; justify-content:flex-start; width: 100%; }
+    .card.builder-card, .card.agent-card { flex: 1 1 300px; min-width: 280px; max-width: 100%; display: flex; flex-direction: column; justify-content: space-between; }
+    .card.builder-card .btn, .card.agent-card .btn { width: 100%; margin-top: auto; }
+    .btn { padding:12px 20px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); color:var(--text); cursor:pointer; font-size: 1.05em; font-weight: 500; transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
+    .btn:hover { border-color:var(--brand); background:var(--brand); color: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--glow-brand); }
+    .btn:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+    .modal { position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:1000; opacity: 0; transition: opacity .3s ease; }
+    .modal.show { display:flex; opacity: 1; }
+    .modal-content { width:min(950px, 95vw); max-height:90vh; overflow:auto; padding:25px; background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 0 40px var(--glow-brand); transform: translateY(20px) scale(0.95); opacity: 0; transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .3s ease; }
+    .modal.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
+    .modal-content h3 { font-size: 1.8em; color: #ffffff; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
+    .about-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 10px; line-height: 1.5; }
+    .modal-content p { margin-bottom: 15px; line-height: 1.7; }
+    footer.legal-footer { border-top: 1px solid var(--border); padding: 40px 24px; background: #000; color: var(--muted); font-size: 0.9em; width: 100%; }
+    .legal-wrap { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
+    .legal-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 25px; }
+    @media (min-width: 900px) { .legal-grid { grid-template-columns: 1.5fr 1fr; } }
+    .legal-section-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: var(--text); letter-spacing: 0.5px; }
+    .legal-text { font-size: 13px; color: #b0b0b0; line-height: 1.8; margin: 0; }
+    .legal-list { list-style: none; padding: 0; margin: 0 0 10px 0; }
+    .legal-list li { margin: 8px 0; font-size: 13px; }
+    .legal-list a { color: var(--brand); text-decoration: underline; transition: color .2s ease; }
+    .legal-list a:hover { color: var(--accent); }
+    .legal-note { font-size: 13px; color: #9aa0a6; margin-top: 10px; }
+    .legal-updated { text-align: center; margin-top: 30px; font-size: 0.85em; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 20px; }
+    .legal-links { text-align: center; margin-top: 15px; font-size: 0.9em; color: var(--muted); }
+    .legal-links a { color: var(--brand); text-decoration: underline; margin: 0 5px; transition: color .2s ease; }
+    .legal-links a:hover { color: var(--accent); }
+    .reveal { opacity:0; transform: translateY(20px); transition: opacity .7s ease-out, transform .7s ease-out; }
+    .reveal.visible { opacity:1; transform: translateY(0); }
+    @keyframes zoompan { 0% { transform: scale(1.05); } 100% { transform: scale(1.15); } }
+    @keyframes pulseGlow { 0% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } 50% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 30px var(--glow-accent); } 100% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } }
   </style>
 </head>
 <body>
-  <!-- ====== HEADER ====== -->
   <header class="site-header reveal">
     <div class="logo-wrap">
       <img src="https://secure.elitelivingconnect.com/file/99d90d48c89a9816deebf6f27b7c39f3/a78ceb63-699f-420d-bfd7-d2e1997e1f58/New+Elite+Living+Realty+Logo+White.png" alt="Elite Living Realty logo" class="logo" />
@@ -199,8 +177,6 @@
       <a href="/?project=" class="nav-link">Search Projects</a>
     </nav>
   </header>
-
-  <!-- ====== HERO ====== -->
   <section id="hero" class="hero reveal">
     <div id="heroBg" class="hero-bg"></div>
     <div class="hero-overlay"></div>
@@ -210,35 +186,26 @@
     </div>
     <div id="eliteBadge" class="elite-badge hidden">Elite Signature</div>
   </section>
-
-  <!-- ====== MAIN ====== -->
   <main id="main" class="layout">
-    <!-- Sidebar -->
     <aside class="sidebar">
       <div class="card glass reveal">
         <h3>At a Glance</h3>
         <ul id="glanceList" class="glance-list"></ul>
       </div>
-
       <div class="card reveal">
         <h3>About This Home</h3>
         <div id="aboutFull" class="about-content"></div>
       </div>
-
       <div class="card glass reveal">
         <h3>Nearby Amenities</h3>
         <ul id="nearbyList" class="nearby-list"></ul>
       </div>
-
       <div class="card glass reveal">
         <h3>Nearby Schools</h3>
         <ul id="schoolsList" class="nearby-list"></ul>
       </div>
     </aside>
-
-    <!-- Content -->
     <section class="content">
-      <!-- Gallery -->
       <section class="card reveal gallery-section">
         <h3>Photo Gallery</h3>
         <div class="gallery-main-img-wrap">
@@ -246,37 +213,25 @@
         </div>
         <div id="galleryThumbs" class="gallery-thumbs"></div>
       </section>
-
-      <!-- Listing Agents -->
       <div class="card reveal">
         <h3>Listing Agents</h3>
         <div id="agentCards" class="card-container"></div>
       </div>
-
-      <!-- NEW: Highlights & Amenities -->
-      <div class="card reveal" id="highlightsCard" style="display:none;">
-        <h3>Highlights &amp; Amenities</h3>
-        <div id="highlightsAmenitiesContent"></div>
+      <div class="card reveal">
+        <h3>Highlights and Amenities</h3>
+        <ul id="highlightsList" class="highlights-list"></ul>
       </div>
-
-      <!-- Map -->
       <div class="card reveal">
         <h3>Map</h3>
         <div id="map" class="map"></div>
       </div>
-
-      <!-- Builder -->
       <div class="card reveal">
         <h3>Builder</h3>
         <div id="builderCards" class="card-container"></div>
       </div>
-
-      <!-- Media -->
       <div id="mediaEmbeds" class="media-section"></div>
     </section>
   </main>
-
-  <!-- ====== MODALS ====== -->
   <div id="aboutModal" class="modal">
     <div class="modal-content">
       <button id="aboutClose" class="modal-close">×</button>
@@ -284,7 +239,6 @@
       <div id="aboutFullModal" class="modal-text-content"></div>
     </div>
   </div>
-
   <div id="builderModal" class="modal">
     <div class="modal-content">
       <button id="builderClose" class="modal-close">×</button>
@@ -292,7 +246,6 @@
       <div id="builderAboutFull" class="modal-text-content"></div>
     </div>
   </div>
-
   <div id="agentModal" class="modal">
     <div class="modal-content">
       <button id="agentClose" class="modal-close">×</button>
@@ -300,16 +253,12 @@
       <div id="agentAboutFull" class="modal-text-content"></div>
     </div>
   </div>
-
-  <!-- ====== LIGHTBOX ====== -->
   <div id="lightbox" class="lightbox">
     <button id="lightboxClose" class="modal-close">×</button>
     <button id="lightboxPrev" class="lightbox-arrow prev">‹</button>
     <img id="lightboxImg" alt="Gallery image" />
     <button id="lightboxNext" class="lightbox-arrow next">›</button>
   </div>
-
-  <!-- ====== FOOTER ====== -->
   <footer class="legal-footer">
     <div class="legal-wrap">
       <div class="legal-grid">
@@ -356,277 +305,277 @@
       </div>
     </div>
   </footer>
-
-  <!-- ====== SCRIPTS ====== -->
   <script>
-    /* Reveal on scroll */
-    const onScrollReveal=()=>{document.querySelectorAll('.reveal').forEach(el=>{const r=el.getBoundingClientRect(); if(r.top<window.innerHeight*0.8){el.classList.add('visible')}})};
-    window.addEventListener('scroll',onScrollReveal); window.addEventListener('load',onScrollReveal);
-
-    /* Modal helpers */
-    const openModal=(id,content)=>{const m=document.getElementById(id); m.querySelector('.modal-text-content').innerHTML=content; m.classList.add('show'); document.body.style.overflow='hidden'};
-    const closeModal=id=>{document.getElementById(id).classList.remove('show'); document.body.style.overflow=''};
-    document.getElementById('aboutClose').onclick=()=>closeModal('aboutModal');
-    document.getElementById('builderClose').onclick=()=>closeModal('builderModal');
-    document.getElementById('agentClose').onclick=()=>closeModal('agentModal');
-    document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m) closeModal(m.id)}));
-    window.addEventListener('keydown',e=>{if(e.key==='Escape') document.querySelectorAll('.modal.show').forEach(m=>closeModal(m.id))});
-
-    /* Lightbox */
-    let lbIndex=0,lbImages=[]; const mainGalleryImg=document.getElementById('mainGalleryImg');
-    function updateMainImage(i){ if(lbImages.length>0){ mainGalleryImg.src=lbImages[i]; mainGalleryImg.alt=`Gallery image ${i+1}`; lbIndex=i; } }
-    function openLightbox(i){ lbIndex=i; updateLightbox(); document.getElementById('lightbox').classList.add('show'); document.body.style.overflow='hidden' }
-    function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); document.body.style.overflow='' }
-    function updateLightbox(){ const img=document.getElementById('lightboxImg'); img.src=lbImages[lbIndex]; if(lbImages[lbIndex+1]) new Image().src=lbImages[lbIndex+1]; if(lbImages[lbIndex-1]) new Image().src=lbImages[lbIndex-1]; }
-    document.getElementById('lightboxClose').onclick=closeLightbox;
-    document.getElementById('lightboxPrev').onclick=()=>{lbIndex=(lbIndex-1+lbImages.length)%lbImages.length; updateLightbox()};
-    document.getElementById('lightboxNext').onclick=()=>{lbIndex=(lbIndex+1)%lbImages.length; updateLightbox()};
-    window.addEventListener('keydown',e=>{const lb=document.getElementById('lightbox'); if(!lb.classList.contains('show')) return; if(e.key==='Escape') closeLightbox(); if(e.key==='ArrowRight') document.getElementById('lightboxNext').click(); if(e.key==='ArrowLeft') document.getElementById('lightboxPrev').click(); });
-
-    /* Haversine (miles) */
-    function haversine(lat1,lon1,lat2,lon2){const R=3958.8; const φ1=lat1*Math.PI/180, φ2=lat2*Math.PI/180; const Δφ=(lat2-lat1)*Math.PI/180, Δλ=(lon2-lon1)*Math.PI/180; const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2; return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)))}
-
-    function searchAndDisplayAmenities(p,listId,types,title){
-      const list=document.getElementById(listId);
-      list.innerHTML='<li class="nearby-item"><small>Searching for nearby '+title.toLowerCase()+'...</small></li>';
-      if(!p.Latitude||!p.Longitude){ list.innerHTML='<li class="nearby-item"><small>Location not available.</small></li>'; return; }
-      const q=`[out:json][timeout:25];
-        ( node["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
-          way["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
-          relation["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
+    // Reveal on scroll
+    const onScrollReveal = () => {
+      document.querySelectorAll('.reveal').forEach(el => {
+        const r = el.getBoundingClientRect();
+        if (r.top < window.innerHeight * 0.8) { el.classList.add('visible'); }
+      });
+    };
+    window.addEventListener('scroll', onScrollReveal);
+    window.addEventListener('load', onScrollReveal);
+    // About modals
+    const openModal = (modalId, content) => {
+      const modal = document.getElementById(modalId);
+      const modalContentDiv = modal.querySelector('.modal-text-content');
+      modalContentDiv.innerHTML = content;
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden';
+    };
+    const closeModal = (modalId) => {
+      document.getElementById(modalId).classList.remove('show');
+      document.body.style.overflow = '';
+    };
+    document.getElementById('aboutClose').onclick = () => closeModal('aboutModal');
+    document.getElementById('builderClose').onclick = () => closeModal('builderModal');
+    document.getElementById('agentClose').onclick = () => closeModal('agentModal');
+    document.querySelectorAll('.modal').forEach(modal => {
+      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal.id); });
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(modal => closeModal(modal.id));
+    });
+    // Lightbox
+    let lbIndex = 0; let lbImages = [];
+    const mainGalleryImg = document.getElementById('mainGalleryImg');
+    function updateMainImage(index) {
+      if (lbImages.length > 0) {
+        mainGalleryImg.src = lbImages[index];
+        mainGalleryImg.alt = `Gallery image ${index + 1}`;
+        lbIndex = index;
+      }
+    }
+    function openLightbox(i){ lbIndex = i; updateLightbox(); document.getElementById('lightbox').classList.add('show'); document.body.style.overflow='hidden'; }
+    function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); document.body.style.overflow=''; }
+    function updateLightbox(){ const img = document.getElementById('lightboxImg'); img.src = lbImages[lbIndex]; if (lbImages[lbIndex + 1]) new Image().src = lbImages[lbIndex + 1]; if (lbImages[lbIndex - 1]) new Image().src = lbImages[lbIndex - 1]; }
+    document.getElementById('lightboxClose').onclick = closeLightbox;
+    document.getElementById('lightboxPrev').onclick = ()=>{ lbIndex = (lbIndex-1+lbImages.length)%lbImages.length; updateLightbox(); };
+    document.getElementById('lightboxNext').onclick = ()=>{ lbIndex = (lbIndex+1)%lbImages.length; updateLightbox(); };
+    // Haversine distance (miles)
+    function haversine(lat1, lon1, lat2, lon2) {
+      const R = 3958.8;
+      const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
+      const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
+      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+    }
+    function searchAndDisplayAmenities(p, listId, queryTypes, title) {
+      const list = document.getElementById(listId);
+      list.innerHTML = '<li class="nearby-item"><small>Searching for nearby ' + title.toLowerCase() + '...</small></li>';
+      const query = `[out:json][timeout:25];
+        ( node["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
+          way["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
+          relation["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
         ); out center 20;`;
-      fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:'data='+encodeURIComponent(q)})
-      .then(r=>r.json()).then(data=>{
-        list.innerHTML=''; if(!data.elements||!data.elements.length){list.innerHTML='<li class="nearby-item"><small>No nearby '+title.toLowerCase()+' found.</small></li>'; return;}
-        const seen=new Set();
-        data.elements.forEach(el=>{
-          if(el.tags && el.tags.name && !seen.has(el.tags.name)){
+      fetch('https://overpass-api.de/api/interpreter', {
+        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
+        body:'data='+encodeURIComponent(query)
+      }).then(r=>r.json()).then(data=>{
+        list.innerHTML = '';
+        if (!data.elements || data.elements.length === 0) {
+          list.innerHTML = '<li class="nearby-item"><small>No nearby ' + title.toLowerCase() + ' found.</small></li>'; return;
+        }
+        const seen = new Set();
+        data.elements.forEach(el => {
+          if (el.tags && el.tags.name && !seen.has(el.tags.name)) {
             seen.add(el.tags.name);
-            const lat=el.lat || (el.center && el.center.lat);
-            const lon=el.lon || (el.center && el.center.lon);
-            const distance = (lat&&lon)?haversine(p.Latitude,p.Longitude,lat,lon).toFixed(1):'N/A';
-            const li=document.createElement('li'); li.className='nearby-item';
-            li.innerHTML=`<strong>${el.tags.name}</strong><p>${distance} miles</p><small>${(el.tags.amenity||'place').replace('_',' ')}</small>`;
+            const li = document.createElement('li');
+            li.className = 'nearby-item';
+            const amenityType = el.tags.amenity ? el.tags.amenity.replace('_', ' ') : 'Place';
+            const lat = el.lat || (el.center && el.center.lat);
+            const lon = el.lon || (el.center && el.center.lon);
+            const distance = lat && lon ? haversine(p.Latitude, p.Longitude, lat, lon).toFixed(1) : 'N/A';
+            const address = el.tags['addr:street'] ? `${el.tags['addr:street']}` : '';
+            li.innerHTML = `<strong>${el.tags.name}</strong><p>${address} • ${distance} miles</p><small>${amenityType}</small>`;
             list.appendChild(li);
           }
         });
-      }).catch(e=>{console.error("Overpass error:",e); list.innerHTML='<li class="nearby-item"><small>Failed to load nearby '+title.toLowerCase()+'.</small></li>';});
+      }).catch(e=>{
+        console.error("Overpass API error:", e);
+        list.innerHTML = '<li class="nearby-item"><small>Failed to load nearby ' + title.toLowerCase() + '.</small></li>';
+      });
     }
-
     function initMapLeaflet(p){
-      const mapEl=document.getElementById('map');
-      if(!p.Latitude || !p.Longitude){ mapEl.innerHTML='<div style="padding:20px; text-align:center; color:var(--muted);">Location not available.</div>'; return; }
-      const center=[p.Latitude,p.Longitude];
-      const map=L.map(mapEl,{zoomControl:true, scrollWheelZoom:false}).setView(center,14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19, attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'}).addTo(map);
-      L.marker(center).addTo(map).bindPopup(`<b>${asText(p['Project Name'])||'Project'}</b><br>${asText(p.Address)||'Location'}`).openPopup();
-      searchAndDisplayAmenities(p,'nearbyList','restaurant|hospital|cafe|bar|park|supermarket|pharmacy|bank|fitness_centre','amenities');
-      searchAndDisplayAmenities(p,'schoolsList','school','schools');
+      const mapEl = document.getElementById('map');
+      if (!p.Latitude || !p.Longitude){ mapEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Location not available.</div>'; return; }
+      const center = [p.Latitude, p.Longitude];
+      const map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: false }).setView(center, 14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
+      L.marker(center).addTo(map).bindPopup(`<b>${p['Project Name'] || 'Project'}</b><br>${p.Address || 'Location'}`).openPopup();
+      searchAndDisplayAmenities(p, 'nearbyList', 'restaurant|hospital|cafe|bar|park|supermarket|pharmacy|bank|fitness_centre', 'amenities');
+      searchAndDisplayAmenities(p, 'schoolsList', 'school', 'schools');
     }
-
-    /* ====== UTILITIES ====== */
-    function asText(v){
-      if(v==null) return "";
-      if(typeof v==="string") return v;
-      if(Array.isArray(v)){
-        return v.map(x=>{
-          if(typeof x==="string") return x;
-          if(x && typeof x==="object"){
-            if('name' in x) return String(x.name);
-            if('text' in x) return String(x.text);
-            if('url' in x) return String(x.url);
-          }
-          return String(x);
-        }).join(", ");
+    // ---------- SAFE COERCION ----------
+    function asText(v) {
+      if (v == null) return "";
+      if (typeof v === "string") return v;
+      if (Array.isArray(v)) {
+        return v.map(x =>
+          typeof x === "string" ? x :
+          (x && typeof x === "object" && "text" in x) ? String(x.text) :
+          (x && x.url) ? x.url :
+          String(x)
+        ).join(", ");
       }
-      if(typeof v==="object"){
-        if('name' in v) return String(v.name);
-        if('text' in v) return String(v.text);
-        try{ return JSON.stringify(v) }catch{ return String(v) }
+      if (typeof v === "object") {
+        if ("text" in v) return String(v.text);
+        try { return JSON.stringify(v); } catch (e) { return String(v); }
       }
       return String(v);
     }
-    function splitCSV(s){return asText(s).split(',').map(t=>t.trim()).filter(Boolean)}
-    function bulletsFrom(s){
-      const raw=asText(s).trim(); if(!raw) return [];
-      if(/\n/.test(raw)) return raw.split(/\n+/).map(x=>x.replace(/^[-•·]\s*/,'').trim()).filter(Boolean);
-      if(/•|·|;|,/.test(raw)) return raw.split(/•|·|;|,/).map(x=>x.trim()).filter(Boolean);
-      return [];
-    }
-    function looksLikeRecordId(v){return /^rec[a-z0-9]{14,}$/i.test((v||'').trim())}
-
-    /* ====== POPULATE UI ====== */
     function populate(p){
       // Hero
-      const hero=document.getElementById('heroBg');
-      const heroSrc=asText(p.HeroImageURL) || splitCSV(p.GalleryURLsCSV)[0] || '';
-      if(heroSrc) hero.style.backgroundImage=`url('${heroSrc}')`;
-      document.getElementById('projectName').textContent=asText(p['Project Name']) || 'New Development';
-      document.getElementById('projectAddress').textContent=asText(p.Address) || 'Address not available';
-
-      // Elite badge (> $1M)
-      const priceNum=Number(String(asText(p['Listing Price'])).replace(/[^0-9.]/g,'')); 
-      if(priceNum>1000000) document.getElementById('eliteBadge').classList.remove('hidden');
+      const hero = document.getElementById('heroBg');
+      const heroSrc = asText(p.HeroImageURL) || (asText(p.GalleryURLsCSV).split(',')[0] || '').trim();
+      if (heroSrc) hero.style.backgroundImage = `url('${heroSrc}')`;
+      document.getElementById('projectName').textContent = asText(p['Project Name']) || 'New Development';
+      document.getElementById('projectAddress').textContent = asText(p.Address) || 'Address not available';
+      // Elite badge
+      const priceStr = asText(p['Listing Price']);
+      const num = Number(String(priceStr).replace(/[^0-9.]/g,''));
+      if (num > 1000000) document.getElementById('eliteBadge').classList.remove('hidden');
       else document.getElementById('eliteBadge').classList.add('hidden');
-
       // At a Glance
-      const gl=document.getElementById('glanceList'); gl.innerHTML='';
-      const completion=p['Estimated Completion'] ? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
-      const formattedPrice=isFinite(priceNum)?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(priceNum):'N/A';
-      const glanceData={'Status':asText(p.Status)||'N/A','Price':formattedPrice,'Beds':asText(p.Beds)||'N/A','Baths':asText(p.Baths)||'N/A','Sq Footage':(asText(p['Sq Footage'])?`${asText(p['Sq Footage'])} sq ft`:'N/A'),'Estimated Completion':completion};
-      Object.entries(glanceData).forEach(([k,v])=>{if(v && v!=='N/A'){const li=document.createElement('li'); li.innerHTML=`<span>${k}</span><span>${v}</span>`; gl.appendChild(li)}});
-      if(asText(p['Site Plans'])){const li=document.createElement('li'); li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`; gl.appendChild(li)}
-
-      // About Home
-      const aboutText=asText(p.Description)||'No description available for this property.';
-      const aboutHomeFull=document.getElementById('aboutFull');
-      aboutHomeFull.innerHTML=`<p class="about-line">${aboutText}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
-
+      const gl = document.getElementById('glanceList'); gl.innerHTML = '';
+      const completionDate = p['Estimated Completion'] ? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
+      const formattedPrice = priceStr ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
+      const glanceData = {
+        'Status': asText(p.Status) || 'N/A',
+        'Price': formattedPrice,
+        'Beds': asText(p.Beds) || 'N/A',
+        'Baths': asText(p.Baths) || 'N/A',
+        'Sq Footage': (asText(p['Sq Footage']) ? `${asText(p['Sq Footage'])} sq ft` : 'N/A'),
+        'Estimated Completion': completionDate
+      };
+      Object.entries(glanceData).forEach(([k,v])=>{ if (v && v !== 'N/A') { const li = document.createElement('li'); li.innerHTML = `<span>${k}</span><span>${v}</span>`; gl.appendChild(li); } });
+      if (asText(p['Site Plans'])) { const li = document.createElement('li'); li.innerHTML = `<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`; gl.appendChild(li); }
+      // About
+      const aboutHomeFull = document.getElementById('aboutFull');
+      const aboutTextHome = asText(p.Description) || 'No description available for this property.';
+      aboutHomeFull.innerHTML = `<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g, "\\'")}</p>\`)">Read More</button>`;
+      // Highlights and Amenities
+      const highlightsList = document.getElementById('highlightsList'); highlightsList.innerHTML = '';
+      const highlights = asText(p['Highlights and Amenities']) || 'N/A';
+      if (highlights && highlights !== 'N/A') {
+        highlights.split(',').map(s => s.trim()).filter(Boolean).forEach(item => {
+          const li = document.createElement('li');
+          li.innerHTML = `<span>${item}</span>`;
+          highlightsList.appendChild(li);
+        });
+      } else {
+        highlightsList.innerHTML = '<li><span>No highlights or amenities listed.</span></li>';
+      }
       // Gallery
-      lbImages = splitCSV(p.GalleryURLsCSV);
-      const galleryThumbsContainer=document.getElementById('galleryThumbs');
-      galleryThumbsContainer.innerHTML='';
-      if(lbImages.length>0) updateMainImage(0);
-      else { mainGalleryImg.src='https://via.placeholder.com/800x450?text=No+Images+Available'; mainGalleryImg.alt='No images available'; }
-      lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i)});
-
+      lbImages = asText(p.GalleryURLsCSV).split(',').map(s => s.trim()).filter(Boolean);
+      const galleryThumbsContainer = document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML = '';
+      if (lbImages.length > 0) { updateMainImage(0); } else { mainGalleryImg.src = 'https://via.placeholder.com/800x450?text=No+Images+Available'; mainGalleryImg.alt='No images available'; }
+      lbImages.forEach((src, i) => { const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick = () => openLightbox(i); });
       // Builder
-      const builderNames=splitCSV(p['Builder Owners']);
-      const builderPhotos=splitCSV(p['Builder Photo']);
-      const builderTitles=splitCSV(p['Builder Owner Titles']);
-      const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
-      if(builderNames.length===0){ builderCardsContainer.innerHTML='<p style="text-align:center; color:var(--muted);">Builder information not available.</p>'; }
-      builderNames.forEach((name,i)=>{const title=builderTitles[i]||'Builder'; const about=`Meet ${name}, a dedicated builder with expertise in ${title}.`; const photo=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder'; builderCardsContainer.innerHTML += `
-        <div class="card reveal builder-card">
-          <div class="agent-top">
-            <img src="${photo}" class="agent-avatar" alt="${name}">
-            <div class="agent-meta">
-              <div class="agent-name">${name}</div>
-              <div class="agent-tag">${title}</div>
+      const builderNames  = asText(p['Builder Owners']).split(',').map(s => s.trim()).filter(Boolean);
+      const builderPhotos = asText(p['Builder Photo']).split(',').map(s => s.trim()).filter(Boolean);
+      const builderTitles = asText(p['Builder Owner Titles']).split(',').map(s => s.trim()).filter(Boolean);
+      const builderCardsContainer = document.getElementById('builderCards'); builderCardsContainer.innerHTML = '';
+      if (builderNames.length === 0) { builderCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Builder information not available.</p>'; }
+      builderNames.forEach((name, i) => {
+        const title = builderTitles[i] || 'Builder';
+        const aboutText = `Meet ${name}, a dedicated builder with expertise in ${title}. They are committed to crafting high-quality homes with exceptional attention to detail and customer satisfaction.`;
+        const photoUrl = builderPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
+        const cardHtml = `
+          <div class="card reveal builder-card">
+            <div class="agent-top">
+              <img src="${photoUrl}" class="agent-avatar" alt="${name}">
+              <div class="agent-meta">
+                <div class="agent-name">${name}</div>
+                <div class="agent-tag">${title}</div>
+              </div>
             </div>
-          </div>
-          <p class="about-line">${about}</p>
-          <button class="btn" onclick="openModal('builderModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`)">Read More</button>
-        </div>`});
-
-      // Agents — names from "Listing Agent 2", but if they look like record IDs, fall back to other name fields
-      let agentNames = splitCSV(p['Listing Agent 2']);
-      if(agentNames.some(looksLikeRecordId)){
-        // try common name fields
-        const candidate1 = splitCSV(p['Agent Names']);
-        const candidate2 = splitCSV(p['Agent Name']);
-        const candidate3 = splitCSV((asText(p['Agent 1 Name'])||'') + ',' + (asText(p['Agent 2 Name'])||''));
-        const candidate4 = splitCSV(p['Agents']);
-        const firstNonEmpty = [candidate1,candidate2,candidate3,candidate4,agentNames].find(arr => arr && arr.length && !arr.some(looksLikeRecordId));
-        agentNames = firstNonEmpty || agentNames;
-      }
-      const agentPhotos=splitCSV(p['Agent Photo']);
-      const agentEmails=splitCSV(p['Agent Email']);
-      const agentPhones=splitCSV(p['Agent Phone Number']);
-      const agentTitles=splitCSV(p['Agent Title']);
-
-      const about1=asText(p['About Agent 1'])||asText(p['Agent 1 About']);
-      const about2=asText(p['About Agent 2'])||asText(p['Agent 2 About']);
-      let bioParts = [about1,about2].filter(Boolean);
-      if(!bioParts.length){
-        const combined=asText(p['About Agent']);
-        if(combined){
-          if(combined.includes('||')) bioParts=combined.split('||');
-          else if(/\n-{3,}\n/.test(combined)) bioParts=combined.split(/\n-{3,}\n/);
-          else if(/\n\n+/.test(combined)) bioParts=combined.split(/\n\n+/);
-          else bioParts=[combined];
-        }
-      }
-
-      const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
-      if(agentNames.length===0){ agentCardsContainer.innerHTML='<p style="text-align:center; color:var(--muted);">Agent information not available.</p>'; }
-      agentNames.forEach((name,i)=>{
-        const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,'');
-        const email=agentEmails[i]||'';
-        const title=agentTitles[i]||'Real Estate Agent';
-        const bio=(bioParts[i]||bioParts[0]||'No detailed bio available.').trim();
-        const excerpt = (bio.indexOf('.')>=0) ? bio.slice(0,bio.indexOf('.')+1) : bio;
-        const photo=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-        agentCardsContainer.innerHTML += `
+            <p class="about-line">${aboutText}</p>
+            <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g, "\\'")}</p>\`)">Read More</button>
+          </div>`;
+        builderCardsContainer.innerHTML += cardHtml;
+      });
+      // Agents
+      const agentNames  = asText(p['Listing Agent 2']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentPhotos = asText(p['Agent Photo']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentEmails = asText(p['Agent Email']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentPhones = asText(p['Agent Phone Number']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentTitles = asText(p['Agent Title']).split(',').map(s => s.trim()).filter(Boolean);
+      const agentCardsContainer = document.getElementById('agentCards'); agentCardsContainer.innerHTML = '';
+      if (agentNames.length === 0) { agentCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Agent information not available.</p>'; }
+      agentNames.forEach((name, i) => {
+        const tel = (agentPhones[i] || '').replace(/[^0-9+]/g,'');
+        const email = agentEmails[i] || '';
+        const title = agentTitles[i] || 'Real Estate Agent';
+        const aboutText = name.toLowerCase().includes('cliff') ? 
+          'Cliff brings a wealth of experience in luxury real estate, focusing on client satisfaction and innovative marketing strategies.' :
+          'Your expertise lies in personalized service, ensuring clients find their dream homes with ease and confidence.';
+        const excerpt = aboutText.split('.')[0] + '.';
+        const photoUrl = agentPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+        const cardHtml = `
           <div class="card reveal agent-card">
             <div class="agent-top">
-              <img src="${photo}" class="agent-avatar" alt="${name}" />
+              <img src="${photoUrl}" class="agent-avatar" alt="${name}" />
               <div class="agent-meta">
                 <div class="agent-name">${name}</div>
                 <div class="agent-tag">${title}</div>
               </div>
             </div>
             <p class="about-line">${excerpt}</p>
-            <button class="btn" onclick="openModal('agentModal', \`<p>${bio.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+            <button class="btn" onclick="openModal('agentModal', \`<p>${aboutText.replace(/'/g, "\\'")}</p>\`)">Read More</button>
             <div class="agent-actions">
-              ${tel ? `<a href="tel:${tel}" class="icon-btn" title="Call ${name}">📞 Call</a>` : ''}
-              ${tel ? `<a href="sms:${tel}" class="icon-btn" title="Text ${name}">💬 Text</a>` : ''}
-              ${email ? `<a href="mailto:${email}" class="icon-btn" title="Email ${name}">✉️ Email</a>` : ''}
+              ${tel ? `<a href="tel:${tel}" class="icon-btn" title="Call ${name}"><span>📞</span> Call</a>` : ''}
+              ${tel ? `<a href="sms:${tel}" class="icon-btn" title="Text ${name}"><span>💬</span> Text</a>` : ''}
+              ${email ? `<a href="mailto:${email}" class="icon-btn" title="Email ${name}"><span>✉️</span> Email</a>` : ''}
             </div>
           </div>`;
+        agentCardsContainer.innerHTML += cardHtml;
       });
-
-      // NEW: Highlights & Amenities
-      const hiRaw=asText(p['Highlights']); const amRaw=asText(p['Amenities']);
-      const hiBul=bulletsFrom(hiRaw); const amBul=bulletsFrom(amRaw);
-      if(hiRaw || amRaw){
-        const wrap=document.getElementById('highlightsCard');
-        const content=document.getElementById('highlightsAmenitiesContent');
-        let html='';
-        if(hiBul.length){ html+=`<h4 style="margin:6px 0">Highlights</h4><ul>${hiBul.map(x=>`<li>${x}</li>`).join('')}</ul>` } else if(hiRaw){ html+=`<h4 style="margin:6px 0">Highlights</h4><p>${hiRaw}</p>` }
-        if(amBul.length){ html+=`<h4 style="margin:10px 0 6px">Amenities</h4><ul>${amBul.map(x=>`<li>${x}</li>`).join('')}</ul>` } else if(amRaw){ html+=`<h4 style="margin:10px 0 6px">Amenities</h4><p>${amRaw}</p>` }
-        content.innerHTML=html; wrap.style.display='';
+      // Media embeds
+      const mediaEmbedsContainer = document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML = '';
+      const marketingVideoUrl = asText(p['Marketing Video']);
+      const preDrywallMatterportUrl = asText(p['Pre Dry Wall Matterport']);
+      const finalMatterportUrl = asText(p['Final Matterport']);
+      let mediaContent = ''; let hasMedia = false;
+      const matterportEmbeds = [];
+      if (preDrywallMatterportUrl && preDrywallMatterportUrl !== 'N/A') {
+        matterportEmbeds.push(`<div class="card reveal"><h3>Pre Dry Wall Matterport</h3><div class="embed"><iframe src="${preDrywallMatterportUrl}" title="Pre Dry Wall Matterport" allowfullscreen></iframe></div></div>`); hasMedia = true;
       }
-
-      // Media — two Matterports side-by-side; video below
-      const media=document.getElementById('mediaEmbeds'); media.innerHTML='';
-      const pre=asText(p['Pre Dry Wall Matterport']); const fin=asText(p['Final Matterport']); const vid=asText(p['Marketing Video']);
-      const mp=[]; if(pre && pre!=='N/A'){ mp.push(`
-        <div class="card reveal">
-          <h3>Pre Dry Wall Matterport</h3>
-          <div class="embed"><iframe src="${pre}" title="Pre Dry Wall Matterport" allowfullscreen></iframe></div>
-        </div>`); }
-      if(fin && fin!=='N/A'){ mp.push(`
-        <div class="card reveal">
-          <h3>Final Matterport</h3>
-          <div class="embed"><iframe src="${fin}" title="Final Matterport" allowfullscreen></iframe></div>
-        </div>`); }
-      if(mp.length){ media.innerHTML += `<h3>Virtual Tours</h3><div class="matterport-grid">${mp.join('')}</div>`; }
-      if(vid && vid!=='N/A'){ media.innerHTML += `
-        <h3>Video Tour</h3>
-        <div class="card reveal marketing-video">
-          <div class="embed"><iframe src="${vid}" title="Marketing Video" allowfullscreen></iframe></div>
-        </div>`; }
-
+      if (finalMatterportUrl && finalMatterportUrl !== 'N/A') {
+        matterportEmbeds.push(`<div class="card reveal"><h3>Final Matterport</h3><div class="embed"><iframe src="${finalMatterportUrl}" title="Final Matterport" allowfullscreen></iframe></div></div>`); hasMedia = true;
+      }
+      if (matterportEmbeds.length > 0) { mediaContent += `<h3>Virtual Tours</h3><div class="matterport-grid">${matterportEmbeds.join('')}</div>`; }
+      if (marketingVideoUrl && marketingVideoUrl !== 'N/A') {
+        mediaContent += `<div class="card reveal marketing-video"><h3>Video Tour</h3><div class="embed"><iframe src="${marketingVideoUrl}" title="Marketing Video" allowfullscreen></iframe></div></div>`; hasMedia = true;
+      }
+      if (hasMedia) { mediaEmbedsContainer.innerHTML = mediaContent; }
+      else { mediaEmbedsContainer.innerHTML = '<div class="card reveal"><p style="text-align:center; color:var(--muted);">No media embeds available for this property.</p></div>'; }
       // Map
       initMapLeaflet(p);
     }
-
-    /* ====== Fetch from Netlify Function ====== */
+    // --- Airtable fetch via Netlify Function ---
     async function fetchProject(slug){
-      const res=await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
-      if(!res.ok) throw new Error(`API error ${res.status}`);
-      const data=await res.json();
-      if(!data || !data.project) throw new Error("Project not found");
+      const res = await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
+      if (!res.ok) throw new Error(`API error ${res.status}`);
+      const data = await res.json();
+      if (!data || !data.project) throw new Error("Project not found");
       return data.project;
     }
-
-    /* ====== BOOT ====== */
     window.addEventListener('DOMContentLoaded', async () => {
-      try{
-        const params=new URLSearchParams(location.search);
-        const slug=(params.get("project")||"").trim();
-        if(!slug) throw new Error("Missing ?project= slug in URL");
-        const project=await fetchProject(slug);
+      try {
+        const params = new URLSearchParams(location.search);
+        const slug = (params.get("project") || "").trim();
+        if (!slug) throw new Error("Missing ?project= slug in URL");
+        const project = await fetchProject(slug);
         populate(project);
         onScrollReveal();
-      }catch(e){
+      } catch (e) {
         console.error("Error loading project data:", e);
-        const main=document.getElementById("main");
-        if(main){
-          main.innerHTML=`<div class="card reveal visible" style="margin:24px; text-align:center; padding:30px;">
+        const mainContent = document.getElementById("main");
+        if (mainContent) {
+          mainContent.innerHTML = `<div class="card reveal visible" style="margin:24px; text-align:center; padding:30px;">
             <h3>Oops!</h3>
-            <p>We couldn't load the project details. Please check the URL (?project=Your-Slug) and try again.</p>
+            <p>We couldn't load the project details. Check the URL (?project=Your-Slug) and try again.</p>
             <p><small>${e.message}</small></p>
             <a href="/" class="btn" style="margin-top:20px;">Go to Home</a>
           </div>`;
@@ -634,20 +583,30 @@
       }
     });
   </script>
-
-  <!-- LeadConnector Chat -->
+  <!-- LeadConnector Chat Widget -->
   <script>
-    (function(){
-      window.LC_API=window.LC_API||{};
-      window.LC_API.on_after_load=function(){ if(window.LC_API && typeof window.LC_API.open_chat==="function"){ window.LC_API.open_chat(); } };
-      var s=document.createElement("script"); s.src="https://beta.leadconnectorhq.com/loader.js"; s.async=true;
-      s.setAttribute("data-resources-url","https://beta.leadconnectorhq.com/chat-widget/loader.js");
-      s.setAttribute("data-widget-id","68ae95eb6d8a7f8237ababc5");
+    (function () {
+      window.LC_API = window.LC_API || {};
+      window.LC_API.on_after_load = function () {
+        if (window.LC_API && typeof window.LC_API.open_chat === "function") {
+          window.LC_API.open_chat();
+        }
+      };
+      var s = document.createElement("script");
+      s.src = "https://beta.leadconnectorhq.com/loader.js";
+      s.async = true;
+      s.setAttribute("data-resources-url", "https://beta.leadconnectorhq.com/chat-widget/loader.js");
+      s.setAttribute("data-widget-id", "68ae95eb6d8a7f8237ababc5");
       document.body.appendChild(s);
-      var tries=0,max=200; var poll=setInterval(function(){
-        tries++; if(window.LC_API && typeof window.LC_API.open_chat==="function"){ try{window.LC_API.open_chat()}catch(e){} clearInterval(poll); }
-        if(tries>=max) clearInterval(poll);
-      },50);
+      var tries = 0, max = 200;
+      var poll = setInterval(function () {
+        tries++;
+        if (window.LC_API && typeof window.LC_API.open_chat === "function") {
+          try { window.LC_API.open_chat(); } catch (e) {}
+          clearInterval(poll);
+        }
+        if (tries >= max) clearInterval(poll);
+      }, 50);
     })();
   </script>
 </body>
