@@ -457,6 +457,9 @@
     // NEW: normalize share links to embeddable URLs
     function toEmbed(raw){
       const url=(raw||"").trim(); if(!url) return "";
+      // Skip N/A values
+      if (url.toLowerCase() === 'n/a') return "";
+      
       // Matterport
       if(/matterport\.com/i.test(url)){
         const m=url.match(/[?&]m=([A-Za-z0-9]+)|\/show\/\?m=([A-Za-z0-9]+)/i);
@@ -512,14 +515,37 @@
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
       aboutHomeFull.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Highlights & Amenities
+      // FIXED: Highlights & Amenities - Use separate fields and combine them
       const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const highlights=asText(p['Highlights and Amenities'])||'';
-      if(highlights.trim()){
-        highlights.split(',').map(s=>s.trim()).filter(Boolean).forEach(item=>{
-          const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; highlightsList.appendChild(li);
+      const highlights=asText(p.Highlights)||''; // Use 'Highlights' field
+      const amenities=asText(p.Amenities)||''; // Use 'Amenities' field
+      
+      // Combine highlights and amenities
+      const allItems = [];
+      if(highlights.trim()) {
+        // Split by newlines first, then by commas if no newlines
+        const highlightItems = highlights.includes('\n') ? 
+          highlights.split('\n').map(s => s.trim()).filter(Boolean) :
+          highlights.split(',').map(s => s.trim()).filter(Boolean);
+        allItems.push(...highlightItems);
+      }
+      if(amenities.trim()) {
+        // Split by newlines first, then by commas if no newlines  
+        const amenityItems = amenities.includes('\n') ? 
+          amenities.split('\n').map(s => s.trim()).filter(Boolean) :
+          amenities.split(',').map(s => s.trim()).filter(Boolean);
+        allItems.push(...amenityItems);
+      }
+      
+      if(allItems.length > 0) {
+        allItems.forEach(item => {
+          if(item.trim()) {
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${item}</span>`;
+            highlightsList.appendChild(li);
+          }
         });
-      }else{
+      } else {
         highlightsList.innerHTML='<li><span>No highlights or amenities listed.</span></li>';
       }
 
@@ -553,23 +579,39 @@
           </div>`;
       });
 
-      // Agents
-      const agentNames=asText(p['Listing Agent 2']).split(',').map(s=>s.trim()).filter(Boolean);
+      // FIXED: Agents - Properly parse Listing Agent 2 field
+      const agentNamesRaw = asText(p['Listing Agent 2']);
+      const agentNames = agentNamesRaw ? agentNamesRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+      
       const agentPhotos=asText(p['Agent Photo']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentEmails=asText(p['Agent Email']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentPhones=asText(p['Agent Phone Number']).split(',').map(s=>s.trim()).filter(Boolean);
       const agentTitles=asText(p['Agent Title']).split(',').map(s=>s.trim()).filter(Boolean);
+      const agentAbout=asText(p['About Agent']).split(', ').filter(Boolean); // Split by comma-space for agent descriptions
+      
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
       if(!agentNames.length){agentCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>';}
+      
       agentNames.forEach((name,i)=>{
         const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,'');
         const email=agentEmails[i]||'';
         const title=agentTitles[i]||'Real Estate Agent';
-        const aboutText = name.toLowerCase().includes('cliff')
-          ? 'Cliff brings a wealth of experience in luxury real estate, focusing on client satisfaction and innovative marketing strategies.'
-          : 'Your expertise lies in personalized service, ensuring clients find their dream homes with ease and confidence.';
-        const excerpt=aboutText.split('.')[0]+'.';
+        
+        // Use the actual agent description from CSV if available, otherwise use default
+        let aboutText = '';
+        if (agentAbout[i] && agentAbout[i].trim()) {
+          aboutText = agentAbout[i].trim();
+        } else if (name.toLowerCase().includes('joseph') || name.toLowerCase().includes('garcia')) {
+          aboutText = 'Joseph Garcia is a proud native Texan with more than 16 years experience in the Real Estate industry, dedicated to helping individuals and families find their dream home and the lifestyle they desire.';
+        } else if (name.toLowerCase().includes('cliff') || name.toLowerCase().includes('graham')) {  
+          aboutText = 'Cliff Graham is an accomplished Sales and Marketing professional with experience at Blue Chip companies like Procter & Gamble, Coca-Cola and PepsiCo, and a passionate Real Estate investor.';
+        } else {
+          aboutText = `${name} brings extensive expertise in real estate, focusing on personalized service and ensuring clients find their dream homes with ease and confidence.`;
+        }
+        
+        const excerpt = aboutText.split('.')[0] + '.';
         const photoUrl=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+        
         agentCardsContainer.innerHTML+=`
           <div class="card reveal agent-card">
             <div class="agent-top">
@@ -589,13 +631,14 @@
           </div>`;
       });
 
-      // Media embeds — two Matterports side-by-side, video below
+      // FIXED: Media embeds — properly handle Matterport URLs
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
       const pre = toEmbed(asText(p['Pre Dry Wall Matterport']));
       const fin = toEmbed(asText(p['Final Matterport']));
       const vid = toEmbed(asText(p['Marketing Video']));
+      
       let html=''; const mp=[];
-      if(pre){
+      if(pre && pre.trim()){
         mp.push(`
           <div class="card reveal">
             <h3>Pre Dry Wall Matterport</h3>
@@ -605,7 +648,7 @@
             </div>
           </div>`);
       }
-      if(fin){
+      if(fin && fin.trim()){
         mp.push(`
           <div class="card reveal">
             <h3>Final Matterport</h3>
@@ -616,7 +659,7 @@
           </div>`);
       }
       if(mp.length){ html += `<h3>Virtual Tours</h3><div class="matterport-grid">${mp.join('')}</div>`; }
-      if(vid){
+      if(vid && vid.trim()){
         html += `
           <div class="card reveal marketing-video">
             <h3>Video Tour</h3>
