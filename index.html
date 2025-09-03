@@ -1,676 +1,573 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Elite Projects • Developments</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <style>
-    :root {
-      --bg: #0a0a0a;
-      --panel: #1a1a1a;
-      --glass: rgba(255,255,255,0.08);
-      --text: #e0e6f0;
-      --muted: #aab8d0;
-      --brand: #66b3ff;
-      --accent: #00e6b8;
-      --border: #2c2c2c;
-      --glow-brand: rgba(102,179,255,.4);
-      --glow-accent: rgba(0,230,184,.4);
-      --shadow-dark: rgba(0,0,0,0.6);
-      --shadow-light: rgba(255,255,255,0.03);
-    }
-    * { box-sizing: border-box }
-    html, body { margin:0; padding:0; background:var(--bg); color:var(--text); font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; line-height: 1.6; scroll-behavior: smooth; }
-    a { color: var(--brand); text-decoration: none; transition: color .2s ease }
-    a:hover { color: var(--accent) }
-    .site-header { display:flex; align-items:center; justify-content:space-between; padding:16px 24px; position:sticky; top:0; z-index:100; background:linear-gradient(180deg, rgba(0,0,0,.95), rgba(0,0,0,.7) 60%, transparent); box-shadow: 0 4px 20px var(--shadow-dark); backdrop-filter: blur(5px); }
-    .logo { height:55px; transition: filter .3s ease; }
-    .logo:hover { filter: drop-shadow(0 0 10px var(--glow-brand)); }
-    .main-nav .nav-link { margin-left:22px; color:var(--text); opacity:.9; font-weight: 500; position: relative; padding-bottom: 4px; }
-    .main-nav .nav-link::after { content: ''; position: absolute; left: 0; bottom: 0; width: 0%; height: 2px; background-color: var(--brand); transition: width .3s ease-out; }
-    .main-nav .nav-link:hover::after { width: 100%; }
-    .hero { position:relative; height:50vh; min-height:400px; overflow:hidden; border-bottom:1px solid var(--border); display: flex; align-items: flex-end; padding: 30px; }
-    .hero-bg { position:absolute; inset:0; background-size:cover; background-position:center; filter:brightness(.65); animation: zoompan 35s infinite alternate ease-in-out; transform-origin: center center; }
-    .hero-overlay { position:absolute; inset:0; background: radial-gradient(1000px 500px at 20% 20%, var(--glow-brand), transparent 70%), radial-gradient(1000px 500px at 80% 60%, var(--glow-accent), transparent 70%); }
-    .hero-content { position:relative; z-index: 5; text-shadow: 0 4px 12px var(--shadow-dark); }
-    .title-xl { font-size:clamp(32px, 6vw, 56px); font-family: 'Orbitron', sans-serif; margin:0 0 8px; line-height: 1.1; color: #ffffff; }
-    .subtitle { color:var(--muted); margin:0; font-size: 1.1em; }
-    .elite-badge { display:inline-block; position:absolute; top:28px; right:28px; padding:8px 14px; border:1px solid var(--border); border-radius:999px; background:rgba(0,0,0,.95); box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); color: #ffffff; font-weight: 600; animation: pulseGlow 2s infinite alternate ease-in-out; letter-spacing: 0.5px; }
-    .hidden { display:none }
-    .layout { display:grid; grid-template-columns: 350px 1fr; gap:24px; padding:24px; max-width: 1400px; margin: 0 auto; }
-    @media (max-width: 980px){ .layout { grid-template-columns:1fr; padding:18px; } .hero { height:40vh; min-height:300px; padding:20px; } .site-header { padding:12px 20px; } .main-nav .nav-link { margin-left:14px; } }
-    @media (max-width: 768px) {
-      .layout { grid-template-columns: 1fr; padding: 16px; }
-      .card-container { flex-direction: column; }
-      .card.builder-card, .card.agent-card { min-width: unset; }
-      .site-header { flex-direction: column; align-items: flex-start; }
-      .main-nav { margin-top: 10px; width: 100%; display: flex; justify-content: space-around; }
-      .main-nav .nav-link { margin: 0 5px; font-size: 0.9em; }
-      .elite-badge { top: 15px; right: 15px; padding: 6px 10px; font-size: 0.9em; }
-      .title-xl { font-size: clamp(28px, 8vw, 48px); }
-      .subtitle { font-size: 0.9em; }
-      .gallery-main-img { height: 300px; }
-      .embed { padding-top: 75%; }
-      .matterport-grid { grid-template-columns: 1fr; }
-    }
-    /* NEW: Mobile-friendly styles for header, gallery, and layout */
-    @media (max-width: 768px) {
-      .site-header {
-        flex-direction: column;
-        align-items: center;
-        padding: 12px 20px;
-        text-align: center;
-      }
-      .logo-wrap { margin-bottom: 10px; }
-      .main-nav { margin-top: 10px; }
-      .main-nav .nav-link { margin: 0 8px; font-size: 0.95em; }
-      .gallery-thumbs {
-        -webkit-overflow-scrolling: touch;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* Internet Explorer 10+ */
-      }
-      .gallery-thumbs::-webkit-scrollbar { display: none; }
-      .media-grid { grid-template-columns: 1fr; }
-      .matterport-grid { grid-template-columns: 1fr; }
-    }
-    .card { background:var(--panel); border:1px solid var(--border); border-radius:18px; padding:20px; position:relative; overflow:hidden; margin-bottom: 24px; box-shadow: 0 6px 20px rgba(0,0,0,0.3); transition: transform .3s ease, box-shadow .3s ease; }
-    .card:hover { transform: translateY(-3px); box-shadow: 0 10px 30px rgba(0,0,0,0.4), 0 0 25px var(--glow-brand); }
-    .card h3 { font-size: 1.5em; margin-top: 0; margin-bottom: 15px; color: #ffffff; }
-    .glass { background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.04)); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.15); }
-    .card::before { content:""; position:absolute; top:0; left:0; right:0; bottom:0; background: linear-gradient(90deg, transparent, rgba(102,179,255,.15) 50%, transparent); transform: translateX(-100%); transition: transform 1s ease-out; pointer-events: none; z-index: 1; }
-    .card.reveal.visible::before { transform: translateX(100%); }
-    .glance-list, .nearby-list { list-style:none; padding:0; margin:0; }
-    .glance-list li { display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px dashed var(--border); font-size: 1.05em; }
-    .glance-list li:last-child { border-bottom: none; }
-    .nearby-item { padding:10px 0; border-bottom:1px dashed var(--border); }
-    .nearby-item:last-child { border-bottom: none; }
-    .nearby-item strong { display:block; font-size: 1.1em; color: var(--brand); }
-    .nearby-item p { margin: 0; line-height: 1.2; }
-    .nearby-item small { color:var(--muted); font-size: 0.9em; }
-    .gallery-main-img-wrap { position: relative; margin-bottom: 15px; }
-    .gallery-main-img { width: 100%; height: 450px; object-fit: cover; border-radius: 14px; border: 1px solid var(--border); box-shadow: 0 8px 25px rgba(0,0,0,0.4); }
-    .gallery-thumbs { display: flex; gap: 12px; overflow-x: auto; padding: 10px 0; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: var(--brand) var(--panel); }
-    .gallery-thumbs::-webkit-scrollbar { height: 8px; }
-    .gallery-thumbs::-webkit-scrollbar-track { background: var(--panel); border-radius: 10px; }
-    .gallery-thumbs::-webkit-scrollbar-thumb { background: var(--brand); border-radius: 10px; }
-    .gallery-thumbs::-webkit-scrollbar-thumb:hover { background: var(--accent); }
-    .lightbox { display:none; position:fixed; inset:0; background:rgba(0,0,0,.95); align-items:center; justify-content:center; z-index:1000; opacity: 0; transition: opacity .3s ease; }
-    .lightbox.show { display:flex; opacity: 1; }
-    .lightbox img { max-width:85vw; max-height:85vh; border-radius:15px; border:2px solid var(--border); box-shadow:0 15px 50px rgba(0,0,0,.7), 0 0 30px var(--glow-brand); transform: scale(0.9); transition: transform .3s ease; }
-    .lightbox.show img { transform: scale(1); }
-    .lightbox-arrow { position:absolute; top:50%; transform:translateY(-50%); background:rgba(255,255,255,.15); border:1px solid var(--border); padding:12px 16px; border-radius:12px; cursor:pointer; font-size:30px; color:#fff; transition: background .2s ease, border-color .2s ease, transform .2s ease; }
-    .lightbox-arrow:hover { background:var(--brand); border-color:var(--brand); transform:translateY(-50%) scale(1.05); }
-    .lightbox-arrow.prev { left:25px } .lightbox-arrow.next{ right:25px }
-    .modal-close { position:absolute; top:20px; right:20px; background:rgba(255,255,255,.15); border:1px solid var(--border); border-radius:12px; color:#fff; font-size:24px; padding:8px 14px; cursor:pointer; transition: background .2s ease, border-color .2s ease; }
-    .modal-close:hover { background:var(--accent); border-color:var(--accent); }
-    .map { height:400px; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-    .leaflet-container{background:#0d101a}
-    .leaflet-control-attribution{background:rgba(0,0,0,.6); border:1px solid var(--border); border-radius:8px !important; color:#ccc !important; padding:4px 8px; font-size: 0.8em;}
-    .leaflet-popup-content-wrapper{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:10px; box-shadow: 0 5px 15px rgba(0,0,0,0.4);}
-    .leaflet-popup-tip{background:#1a1a1a}
-    .leaflet-control-zoom a{background:#1a1a1a; color:var(--text); border:1px solid var(--border); border-radius:8px; transition: background .2s ease, color .2s ease;}
-    .leaflet-control-zoom a:hover { background: var(--brand); color: #fff; }
-    .media-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap:24px }
-    .matterport-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap:24px; }
-    @media (max-width: 768px) { .matterport-grid { grid-template-columns: 1fr; } }
-    .embed { position:relative; padding-top:56.25%; border-radius:14px; overflow:hidden; border:1px solid var(--border); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
-    .marketing-video .embed { padding-top: 45%; }
-    .embed iframe { position:absolute; inset:0; width:100%; height:100%; border:none; }
-    #sitePlan a.btn { display:block; text-align:center; margin-top: 15px; }
-    .agent-top { display:flex; align-items:center; gap:15px; margin-bottom: 12px; }
-    .agent-avatar { width:60px; height:60px; border-radius:50%; border:2px solid var(--brand); object-fit:cover; box-shadow: 0 0 15px rgba(0,0,0,0.3); }
-    .agent-name { font-weight:600; font-size: 1.2em; color: #ffffff; }
-    .agent-tag { color:var(--muted); font-size:14px; }
-    .agent-actions { display:flex; align-items:center; gap:12px; margin-top:15px; justify-content: center; }
-    .icon-btn { display:inline-flex; align-items:center; justify-content: center; gap:8px; padding:10px 14px; background:rgba(255,255,255,.08); border:1px solid var(--border); border-radius:14px; color:var(--text); font-size: 1.1em; transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
-    .icon-btn:hover { background:var(--brand); border-color:var(--brand); color: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--glow-brand); }
-    .icon-btn .badge { margin-left:6px; font-size:11px; padding:3px 8px; border:1px solid rgba(255,255,255,0.15); border-radius:999px; background:rgba(255,255,255,.08); color: var(--accent); }
-    .card-container { display:flex; flex-wrap:wrap; gap:20px; justify-content:flex-start; }
-    .card.builder-card, .card.agent-card { flex: 1 1 320px; min-width: 280px; display: flex; flex-direction: column; justify-content: space-between; }
-    .card.builder-card .btn, .card.agent-card .btn { width: 100%; margin-top: auto; }
-    .btn { padding:12px 20px; border:1px solid var(--border); border-radius:12px; background:rgba(255,255,255,.06); color:var(--text); cursor:pointer; font-size: 1.05em; font-weight: 500; transition: background .2s ease, border-color .2s ease, transform .2s ease, box-shadow .2s ease; }
-    .btn:hover { border-color:var(--brand); background:var(--brand); color: #fff; transform: translateY(-2px); box-shadow: 0 5px 15px var(--glow-brand); }
-    .btn:active { transform: translateY(0); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
-    .modal { position:fixed; inset:0; background:rgba(0,0,0,.75); display:none; align-items:center; justify-content:center; z-index:1000; opacity: 0; transition: opacity .3s ease; }
-    .modal.show { display:flex; opacity: 1; }
-    .modal-content { width:min(950px, 95vw); max-height:90vh; overflow:auto; padding:25px; background:var(--panel); border:1px solid var(--border); border-radius:18px; box-shadow: 0 15px 50px rgba(0,0,0,0.6), 0 0 40px var(--glow-brand); transform: translateY(20px) scale(0.95); opacity: 0; transition: transform .3s cubic-bezier(0.34, 1.56, 0.64, 1), opacity .3s ease; }
-    .modal.show .modal-content { transform: translateY(0) scale(1); opacity: 1; }
-    .modal-content h3 { font-size: 1.8em; color: #ffffff; margin-bottom: 20px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-    .about-line { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 10px; line-height: 1.5; }
-    .modal-content p { margin-bottom: 15px; line-height: 1.7; }
-    footer.legal-footer { border-top: 1px solid var(--border); padding: 40px 24px; background: #000; color: var(--muted); font-size: 0.9em; }
-    .legal-wrap { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; }
-    .legal-grid { display: grid; grid-template-columns: 1fr; gap: 30px; margin-top: 25px; }
-    @media (min-width: 900px) { .legal-grid { grid-template-columns: 1.5fr 1fr; } }
-    .legal-section-title { font-weight: 700; font-size: 14px; margin-bottom: 10px; color: var(--text); letter-spacing: 0.5px; }
-    .legal-text { font-size: 13px; color: #b0b0b0; line-height: 1.8; margin: 0; }
-    .legal-list { list-style: none; padding: 0; margin: 0 0 10px 0; }
-    .legal-list li { margin: 8px 0; font-size: 13px; }
-    .legal-list a { color: var(--brand); text-decoration: underline; transition: color .2s ease; }
-    .legal-list a:hover { color: var(--accent); }
-    .legal-note { font-size: 13px; color: #9aa0a6; margin-top: 10px; }
-    .legal-updated { text-align: center; margin-top: 30px; font-size: 0.85em; color: var(--muted); border-top: 1px dashed var(--border); padding-top: 20px; }
-    .legal-links { text-align: center; margin-top: 15px; font-size: 0.9em; color: var(--muted); }
-    .legal-links a { color: var(--brand); text-decoration: underline; margin: 0 5px; transition: color .2s ease; }
-    .legal-links a:hover { color: var(--accent); }
-    .reveal { opacity:0; transform: translateY(20px); transition: opacity .7s ease-out, transform .7s ease-out; }
-    .reveal.visible { opacity:1; transform: translateY(0); }
-    @keyframes zoompan { 0% { transform: scale(1.05); } 100% { transform: scale(1.15); } }
-    @keyframes pulseGlow { 0% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } 50% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 30px var(--glow-accent); } 100% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } }
-  </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Elite Projects • Developments</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <style>
+    :root{
+      --bg:#0a0a0a; --panel:#1a1a1a; --glass:rgba(255,255,255,.08);
+      --text:#e0e6f0; --muted:#aab8d0; --brand:#66b3ff; --accent:#00e6b8;
+      --border:#2c2c2c; --glow-brand:rgba(102,179,255,.4); --glow-accent:rgba(0,230,184,.4);
+      --shadow-dark:rgba(0,0,0,.6); --shadow-light:rgba(255,255,255,.03);
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:'Inter',ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;line-height:1.6;scroll-behavior:smooth}
+    a{color:var(--brand);text-decoration:none;transition:color .2s ease}
+    a:hover{color:var(--accent)}
+
+    /* Header (improved mobile) */
+    .site-header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 18px;position:sticky;top:0;z-index:100;background:linear-gradient(180deg,rgba(0,0,0,.95),rgba(0,0,0,.7) 60%,transparent);box-shadow:0 4px 20px var(--shadow-dark);backdrop-filter:blur(5px)}
+    .logo{height:50px;transition:filter .3s ease}
+    .logo:hover{filter:drop-shadow(0 0 10px var(--glow-brand))}
+    .main-nav{display:flex;flex-wrap:wrap;gap:12px}
+    .main-nav .nav-link{color:var(--text);opacity:.9;font-weight:500;position:relative;padding-bottom:4px}
+    .main-nav .nav-link:hover{opacity:1}
+    .main-nav .nav-link::after{content:'';position:absolute;left:0;bottom:0;width:0;height:2px;background:var(--brand);transition:width .3s ease-out}
+    .main-nav .nav-link:hover::after{width:100%}
+
+    /* Hero */
+    .hero{position:relative;height:50vh;min-height:380px;overflow:hidden;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:22px}
+    .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.65);animation:zoompan 35s infinite alternate ease-in-out;transform-origin:center}
+    .hero-overlay{position:absolute;inset:0;background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%),radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
+    .hero-content{position:relative;z-index:5;text-shadow:0 4px 12px var(--shadow-dark)}
+    .title-xl{font-size:clamp(28px,6vw,56px);font-family:'Orbitron',sans-serif;margin:0 0 6px;line-height:1.1;color:#fff}
+    .subtitle{color:var(--muted);margin:0;font-size:1.05em}
+    .elite-badge{display:inline-block;position:absolute;top:20px;right:20px;padding:7px 12px;border:1px solid var(--border);border-radius:999px;background:rgba(0,0,0,.95);box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent);color:#fff;font-weight:600;animation:pulseGlow 2s infinite alternate ease-in-out;letter-spacing:.5px}
+    .hidden{display:none}
+
+    /* Layout */
+    .layout{display:grid;grid-template-columns:340px 1fr;gap:22px;padding:20px;max-width:1400px;margin:0 auto}
+
+    /* Cards */
+    .card{background:var(--panel);border:1px solid var(--border);border-radius:18px;padding:18px;position:relative;overflow:hidden;margin-bottom:20px;box-shadow:0 6px 20px rgba(0,0,0,.3);transition:transform .3s ease,box-shadow .3s ease}
+    .card:hover{transform:translateY(-3px);box-shadow:0 10px 30px rgba(0,0,0,.4),0 0 25px var(--glow-brand)}
+    .card h3{font-size:1.35em;margin:0 0 12px;color:#fff}
+    .glass{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15)}
+    .card::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(102,179,255,.15) 50%,transparent);transform:translateX(-100%);transition:transform 1s ease-out;pointer-events:none;z-index:1}
+    .card.reveal.visible::before{transform:translateX(100%)}
+
+    /* Lists */
+    .glance-list,.nearby-list{list-style:none;padding:0;margin:0}
+    .glance-list li{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px dashed var(--border);font-size:1.03em}
+    .glance-list li:last-child{border-bottom:none}
+    .nearby-item{padding:9px 0;border-bottom:1px dashed var(--border)}
+    .nearby-item:last-child{border-bottom:none}
+    .nearby-item strong{display:block;font-size:1.06em;color:var(--brand)}
+    .nearby-item p{margin:0;line-height:1.2}
+    .nearby-item small{color:var(--muted);font-size:.9em}
+
+    /* Gallery */
+    .gallery-main-img-wrap{position:relative;margin-bottom:12px}
+    .gallery-main-img{width:100%;height:440px;object-fit:cover;border-radius:14px;border:1px solid var(--border);box-shadow:0 8px 25px rgba(0,0,0,.4)}
+    .gallery-thumbs{display:flex;gap:10px;overflow-x:auto;padding:8px 0;-webkit-overflow-scrolling:touch;scrollbar-width:thin;scrollbar-color:var(--brand) var(--panel)}
+    .gallery-thumbs::-webkit-scrollbar{height:8px}
+    .gallery-thumbs::-webkit-scrollbar-track{background:var(--panel);border-radius:10px}
+    .gallery-thumbs::-webkit-scrollbar-thumb{background:var(--brand);border-radius:10px}
+    .gallery-thumbs::-webkit-scrollbar-thumb:hover{background:var(--accent)}
+    .thumb{flex-shrink:0;width:120px;height:82px;border-radius:10px;overflow:hidden;cursor:pointer;border:2px solid transparent;transition:border-color .25s ease,box-shadow .25s ease,transform .25s ease;box-shadow:0 4px 10px rgba(0,0,0,.2)}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .thumb:hover{border-color:var(--brand);box-shadow:0 0 15px var(--glow-brand);transform:translateY(-2px)}
+
+    /* Lightbox */
+    .lightbox{display:none;position:fixed;inset:0;background:rgba(0,0,0,.95);align-items:center;justify-content:center;z-index:1000;opacity:0;transition:opacity .3s ease}
+    .lightbox.show{display:flex;opacity:1}
+    .lightbox img{max-width:85vw;max-height:85vh;border-radius:15px;border:2px solid var(--border);box-shadow:0 15px 50px rgba(0,0,0,.7),0 0 30px var(--glow-brand);transform:scale(.9);transition:transform .3s ease}
+    .lightbox.show img{transform:scale(1)}
+    .lightbox-arrow{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,.15);border:1px solid var(--border);padding:12px 16px;border-radius:12px;cursor:pointer;font-size:30px;color:#fff;transition:background .2s ease,border-color .2s ease,transform .2s ease}
+    .lightbox-arrow:hover{background:var(--brand);border-color:var(--brand);transform:translateY(-50%) scale(1.05)}
+    .lightbox-arrow.prev{left:25px}.lightbox-arrow.next{right:25px}
+    .modal-close{position:absolute;top:20px;right:20px;background:rgba(255,255,255,.15);border:1px solid var(--border);border-radius:12px;color:#fff;font-size:24px;padding:8px 14px;cursor:pointer;transition:background .2s ease,border-color .2s ease}
+    .modal-close:hover{background:var(--accent);border-color:var(--accent)}
+
+    /* Map */
+    .map{height:400px;border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    .leaflet-container{background:#0d101a}
+    .leaflet-control-attribution{background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:8px !important;color:#ccc !important;padding:4px 8px;font-size:.8em}
+    .leaflet-popup-content-wrapper{background:#1a1a1a;color:var(--text);border:1px solid var(--border);border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.4)}
+    .leaflet-popup-tip{background:#1a1a1a}
+    .leaflet-control-zoom a{background:#1a1a1a;color:var(--text);border:1px solid var(--border);border-radius:8px;transition:background .2s ease,color .2s ease}
+    .leaflet-control-zoom a:hover{background:var(--brand);color:#fff}
+
+    /* Embeds (Matterport grid + video below) */
+    .media-section h3{margin:14px 0}
+    .matterport-grid{display:grid;grid-template-columns:repeat(2,minmax(280px,1fr));gap:18px}
+    .embed{position:relative;padding-top:56.25%;border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.3)}
+    .marketing-video .embed{padding-top:56.25%} /* keep 16:9; mobile adjusts below */
+    .embed iframe{position:absolute;inset:0;width:100%;height:100%;border:none}
+
+    /* Agent/Builder cards */
+    .agent-top{display:flex;align-items:center;gap:12px;margin-bottom:10px}
+    .agent-avatar{width:56px;height:56px;border-radius:50%;border:2px solid var(--brand);object-fit:cover;box-shadow:0 0 15px rgba(0,0,0,.3)}
+    .agent-name{font-weight:600;font-size:1.1em;color:#fff}
+    .agent-tag{color:var(--muted);font-size:13px}
+    .agent-actions{display:flex;align-items:center;gap:10px;margin-top:12px;justify-content:center}
+    .icon-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;background:rgba(255,255,255,.08);border:1px solid var(--border);border-radius:12px;color:var(--text);font-size:1em;transition:background .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease}
+    .icon-btn:hover{background:var(--brand);border-color:var(--brand);color:#fff;transform:translateY(-2px);box-shadow:0 5px 15px var(--glow-brand)}
+    .icon-btn .badge{margin-left:6px;font-size:11px;padding:3px 8px;border:1px solid rgba(255,255,255,.15);border-radius:999px;background:rgba(255,255,255,.08);color:var(--accent)}
+    .card-container{display:flex;flex-wrap:wrap;gap:16px;justify-content:flex-start}
+    .card.builder-card,.card.agent-card{flex:1 1 320px;min-width:280px;display:flex;flex-direction:column;justify-content:space-between}
+    .card.builder-card .btn,.card.agent-card .btn{width:100%;margin-top:auto}
+
+    /* Buttons */
+    .btn{padding:11px 18px;border:1px solid var(--border);border-radius:12px;background:rgba(255,255,255,.06);color:var(--text);cursor:pointer;font-size:1.02em;font-weight:500;transition:background .2s ease,border-color .2s ease,transform .2s ease,box-shadow .2s ease}
+    .btn:hover{border-color:var(--brand);background:var(--brand);color:#fff;transform:translateY(-2px);box-shadow:0 5px 15px var(--glow-brand)}
+    .btn:active{transform:translateY(0);box-shadow:0 2px 8px rgba(0,0,0,.3)}
+
+    /* Modals */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;z-index:1000;opacity:0;transition:opacity .3s ease}
+    .modal.show{display:flex;opacity:1}
+    .modal-content{width:min(950px,95vw);max-height:90vh;overflow:auto;padding:22px;background:var(--panel);border:1px solid var(--border);border-radius:18px;box-shadow:0 15px 50px rgba(0,0,0,.6),0 0 40px var(--glow-brand);transform:translateY(18px) scale(.95);opacity:0;transition:transform .3s cubic-bezier(.34,1.56,.64,1),opacity .3s ease}
+    .modal.show .modal-content{transform:translateY(0) scale(1);opacity:1}
+    .modal-content h3{font-size:1.6em;color:#fff;margin-bottom:16px;border-bottom:1px solid var(--border);padding-bottom:8px}
+    .about-line{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:8px;line-height:1.5}
+    .modal-content p{margin-bottom:12px;line-height:1.7}
+
+    /* Footer */
+    footer.legal-footer{border-top:1px solid var(--border);padding:32px 20px;background:#000;color:var(--muted);font-size:.92em}
+    .legal-wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column}
+    .legal-grid{display:grid;grid-template-columns:1fr;gap:24px;margin-top:20px}
+    @media (min-width:900px){.legal-grid{grid-template-columns:1.5fr 1fr}}
+    .legal-section-title{font-weight:700;font-size:14px;margin-bottom:8px;color:var(--text);letter-spacing:.5px}
+    .legal-text{font-size:13px;color:#b0b0b0;line-height:1.8;margin:0}
+    .legal-list{list-style:none;padding:0;margin:0 0 10px 0}
+    .legal-list li{margin:8px 0;font-size:13px}
+    .legal-list a{color:var(--brand);text-decoration:underline;transition:color .2s ease}
+    .legal-list a:hover{color:var(--accent)}
+    .legal-note{font-size:13px;color:#9aa0a6;margin-top:10px}
+    .legal-updated{text-align:center;margin-top:22px;font-size:.85em;color:var(--muted);border-top:1px dashed var(--border);padding-top:16px}
+    .legal-links{text-align:center;margin-top:12px;font-size:.9em;color:var(--muted)}
+    .legal-links a{color:var(--brand);text-decoration:underline;margin:0 5px;transition:color .2s ease}
+    .legal-links a:hover{color:var(--accent)}
+
+    /* Reveal */
+    .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s ease-out,transform .7s ease-out}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+
+    /* Animations */
+    @keyframes zoompan{0%{transform:scale(1.05)}100%{transform:scale(1.15)}}
+    @keyframes pulseGlow{0%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent)}50%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 30px var(--glow-accent)}100%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent)}}
+
+    /* Responsive improvements */
+    @media (max-width:980px){
+      .layout{grid-template-columns:1fr;padding:16px}
+      .hero{height:42vh;min-height:300px;padding:18px}
+      .gallery-main-img{height:320px}
+    }
+    @media (max-width:768px){
+      .main-nav{width:100%;justify-content:space-between}
+      .elite-badge{top:12px;right:12px;padding:6px 10px;font-size:.9em}
+      .title-xl{font-size:clamp(24px,8vw,44px)}
+      .subtitle{font-size:.95em}
+      .gallery-main-img{height:280px}
+      .matterport-grid{grid-template-columns:1fr} /* stack matterports on small screens */
+      .marketing-video .embed{padding-top:62%} /* slightly taller on mobile for controls */
+    }
+  </style>
 </head>
 <body>
-  <header class="site-header reveal">
-    <div class="logo-wrap">
-      <img src="https://secure.elitelivingconnect.com/file/99d90d48c89a9816deebf6f27b7c39f3/a78ceb63-699f-420d-bfd7-d2e1997e1f58/New+Elite+Living+Realty+Logo+White.png" alt="Elite Living Realty logo" class="logo" />
-    </div>
-    <nav class="main-nav">
-      <a href="/" class="nav-link">Home</a>
-      <a href="/?project=" class="nav-link">Search Projects</a>
-    </nav>
-  </header>
+  <header class="site-header reveal">
+    <div class="logo-wrap">
+      <img src="https://secure.elitelivingconnect.com/file/99d90d48c89a9816deebf6f27b7c39f3/a78ceb63-699f-420d-bfd7-d2e1997e1f58/New+Elite+Living+Realty+Logo+White.png" alt="Elite Living Realty logo" class="logo" />
+    </div>
+    <nav class="main-nav">
+      <a href="/" class="nav-link">Home</a>
+      <a href="/?project=" class="nav-link">Search Projects</a>
+    </nav>
+  </header>
 
-  <section id="hero" class="hero reveal">
-    <div id="heroBg" class="hero-bg"></div>
-    <div class="hero-overlay"></div>
-    <div class="hero-content">
-      <h1 id="projectName" class="title-xl"></h1>
-      <p id="projectAddress" class="subtitle"></p>
-    </div>
-    <div id="eliteBadge" class="elite-badge hidden">Elite Signature</div>
-  </section>
+  <section id="hero" class="hero reveal">
+    <div id="heroBg" class="hero-bg"></div>
+    <div class="hero-overlay"></div>
+    <div class="hero-content">
+      <h1 id="projectName" class="title-xl"></h1>
+      <p id="projectAddress" class="subtitle"></p>
+    </div>
+    <div id="eliteBadge" class="elite-badge hidden">Elite Signature</div>
+  </section>
 
-  <main id="main" class="layout">
-    <aside class="sidebar">
-      <div class="card glass reveal">
-        <h3>At a Glance</h3>
-        <ul id="glanceList" class="glance-list"></ul>
-      </div>
+  <main id="main" class="layout">
+    <aside class="sidebar">
+      <div class="card glass reveal">
+        <h3>At a Glance</h3>
+        <ul id="glanceList" class="glance-list"></ul>
+      </div>
 
-      <div class="card reveal">
-        <h3>About This Home</h3>
-        <div id="aboutFull" class="about-content"></div>
-      </div>
+      <div class="card reveal">
+        <h3>About This Home</h3>
+        <div id="aboutFull" class="about-content"></div>
+      </div>
 
-      <div class="card glass reveal">
-        <h3>Nearby Amenities</h3>
-        <ul id="nearbyList" class="nearby-list"></ul>
-      </div>
+      <div class="card glass reveal">
+        <h3>Nearby Amenities</h3>
+        <ul id="nearbyList" class="nearby-list"></ul>
+      </div>
 
-      <div class="card glass reveal">
-        <h3>Nearby Schools</h3>
-        <ul id="schoolsList" class="nearby-list"></ul>
-      </div>
-    </aside>
+      <div class="card glass reveal">
+        <h3>Nearby Schools</h3>
+        <ul id="schoolsList" class="nearby-list"></ul>
+      </div>
+    </aside>
 
-    <section class="content">
-      <section class="card reveal gallery-section">
-        <h3>Photo Gallery</h3>
-        <div class="gallery-main-img-wrap">
-          <img id="mainGalleryImg" class="gallery-main-img" src="" alt="Main gallery image">
-        </div>
-        <div id="galleryThumbs" class="gallery-thumbs"></div>
-      </section>
+    <section class="content">
+      <section class="card reveal gallery-section">
+        <h3>Photo Gallery</h3>
+        <div class="gallery-main-img-wrap">
+          <img id="mainGalleryImg" class="gallery-main-img" src="" alt="Main gallery image">
+        </div>
+        <div id="galleryThumbs" class="gallery-thumbs"></div>
+      </section>
 
-            <div id="highlightsCard" class="card reveal">
-        <h3>Highlights & Amenities</h3>
-        <div id="highlightsContent"></div>
-      </div>
-      
-      <div class="card reveal">
-        <h3>Listing Agents</h3>
-        <div id="agentCards" class="card-container"></div>
-      </div>
+      <div class="card reveal">
+        <h3>Listing Agents</h3>
+        <div id="agentCards" class="card-container"></div>
+      </div>
 
-      <div class="card reveal">
-        <h3>Map</h3>
-        <div id="map" class="map"></div>
-      </div>
+      <!-- NEW: Highlights & Amenities (requested) -->
+      <div class="card reveal" id="highlightsCard" style="display:none;">
+        <h3>Highlights &amp; Amenities</h3>
+        <div id="highlightsAmenitiesContent"></div>
+      </div>
 
-      <div class="card reveal">
-        <h3>Builder</h3>
-        <div id="builderCards" class="card-container"></div>
-      </div>
+      <div class="card reveal">
+        <h3>Map</h3>
+        <div id="map" class="map"></div>
+      </div>
 
-            <div id="mediaEmbeds" class="media-section"></div>
-    </section>
-  </main>
+      <div class="card reveal">
+        <h3>Builder</h3>
+        <div id="builderCards" class="card-container"></div>
+      </div>
 
-  <div id="aboutModal" class="modal">
-    <div class="modal-content">
-      <button id="aboutClose" class="modal-close">×</button>
-      <h3>About This Home</h3>
-      <div id="aboutFullModal" class="modal-text-content"></div>
-      <button id="aboutClose2" class="btn" style="margin-top:20px;">Close</button>
-    </div>
-  </div>
+      <div id="mediaEmbeds" class="media-section"></div>
+    </section>
+  </main>
 
-  <div id="builderModal" class="modal">
-    <div class="modal-content">
-      <button id="builderClose" class="modal-close">×</button>
-      <h3>About Builder</h3>
-      <div id="builderAboutFull" class="modal-text-content"></div>
-      <button id="builderClose2" class="btn" style="margin-top:20px;">Close</button>
-    </div>
-  </div>
+  <!-- Modals -->
+  <div id="aboutModal" class="modal">
+    <div class="modal-content">
+      <button id="aboutClose" class="modal-close">×</button>
+      <h3>About This Home</h3>
+      <div id="aboutFullModal" class="modal-text-content"></div>
+    </div>
+  </div>
 
-  <div id="agentModal" class="modal">
-    <div class="modal-content">
-      <button id="agentClose" class="modal-close">×</button>
-      <h3>About Agent</h3>
-      <div id="agentAboutFull" class="modal-text-content"></div>
-      <button id="agentClose2" class="btn" style="margin-top:20px;">Close</button>
-    </div>
-  </div>
+  <div id="builderModal" class="modal">
+    <div class="modal-content">
+      <button id="builderClose" class="modal-close">×</button>
+      <h3>About Builder</h3>
+      <div id="builderAboutFull" class="modal-text-content"></div>
+    </div>
+  </div>
 
-  <div id="lightbox" class="lightbox">
-    <button id="lightboxClose" class="modal-close">×</button>
-    <button id="lightboxPrev" class="lightbox-arrow prev">‹</button>
-    <img id="lightboxImg" alt="Gallery image" />
-    <button id="lightboxNext" class="lightbox-arrow next">›</button>
-  </div>
+  <div id="agentModal" class="modal">
+    <div class="modal-content">
+      <button id="agentClose" class="modal-close">×</button>
+      <h3>About Agent</h3>
+      <div id="agentAboutFull" class="modal-text-content"></div>
+    </div>
+  </div>
 
-  <footer class="legal-footer">
-    <div class="legal-wrap">
-      <div class="legal-grid">
-        <div>
-          <div class="legal-section-title">TREC Notices - <a href="https://drive.google.com/file/d/1q8uIDtUqFAk6npJ8QkqBKrG2sdqo9q8w/view?usp=sharing" target="_blank" rel="noopener">Info About Brokerage Services</a> | <a href="https://www.trec.texas.gov/sites/default/files/pdf-forms/CN%201-5_0.pdf" target="_blank" rel="noopener">Consumer Protection Notice</a></div>
-          <div class="legal-section-title" style="margin-top:20px;">Affiliated Business Disclosure</div>
-          <p class="legal-text">
-            Hometown Lend Lending is an affiliated business of Elite Living Realty. All mortgage lending products and information are provided by
-            Hometown Lending, LLC | NMLS #2712965; <a href="https://www.nmlsconsumeraccess.org/" target="_blank" rel="noopener">www.NMLSConsumerAccess.org</a>.
-            Licensed in multiple states. This site is not authorized by the Texas State Department of Financial Services for mortgage solicitation or loan applications activities related to properties located in the State of Texas.
-            For additional information on Hometown Lending or to receive lending services in the State of Texas, please visit
-            <a href="https://hometownlend.com/" target="_blank" rel="noopener">hometownlend.com</a>.
-          </p>
-          <p class="legal-note">
-            Affiliated Business Arrangement Notice:
-            <a href="https://drive.google.com/file/d/1-KgEXEzSbC_NTXHOrAtn9pvVi1qR6A_e/view?usp=sharing" target="_blank" rel="noopener">
-              View disclosure document
-            </a>.
-          </p>
-        </div>
-        <div>
-          <div class="legal-section-title">Accessibility</div>
-          <p class="legal-text">
-            If you are using a screen reader, or having trouble reading this website, please call Redfin Customer Support for help at
-            <a href="tel:18447597732">1-844-759-7732</a>.
-          </p>
-          <div class="legal-section-title" style="margin-top:14px;">Fair Housing</div>
-          <p class="legal-text">
-            Equal Housing Opportunity. ELITE LIVING REALTY IS COMMITTED TO AND ABIDES BY THE FAIR HOUSING ACT AND EQUAL OPPORTUNITY ACT.
-            Read our
-            <a href="https://www.elitelivingrealty.com/fair-housing-policy" target="_blank" rel="noopener">Fair Housing Policy</a>
-            and the
-            <a href="https://www.tdhca.texas.gov/" target="_blank" rel="noopener">Texas State Fair Housing Notice</a>.
-          </p>
-        </div>
-      </div>
-      <div class="legal-updated">Updated September 2025</div>
-      <div class="legal-links">
-        By searching, you agree to the
-        <a href="https://www.elitelivingrealty.com/terms-of-use" target="_blank" rel="noopener">Terms of Use</a>,
-        and
-        <a href="https://www.elitelivingrealty.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.
-        &nbsp;<a href="https://www.elitelivingrealty.com/opt-out" target="_blank" rel="noopener">Do not sell or share my personal information</a>.
-      </div>
-    </div>
-  </footer>
+  <!-- Lightbox -->
+  <div id="lightbox" class="lightbox">
+    <button id="lightboxClose" class="modal-close">×</button>
+    <button id="lightboxPrev" class="lightbox-arrow prev">‹</button>
+    <img id="lightboxImg" alt="Gallery image" />
+    <button id="lightboxNext" class="lightbox-arrow next">›</button>
+  </div>
 
-  <script>
-    // Reveal on scroll
-    const onScrollReveal = () => {
-      document.querySelectorAll('.reveal').forEach(el => {
-        const r = el.getBoundingClientRect();
-        if (r.top < window.innerHeight * 0.8) { el.classList.add('visible'); }
-      });
-    };
-    window.addEventListener('scroll', onScrollReveal);
-    window.addEventListener('load', onScrollReveal);
+  <footer class="legal-footer">
+    <div class="legal-wrap">
+      <div class="legal-grid">
+        <div>
+          <div class="legal-section-title">TREC Notices - <a href="https://drive.google.com/file/d/1q8uIDtUqFAk6npJ8QkqBKrG2sdqo9q8w/view?usp=sharing" target="_blank" rel="noopener">Info About Brokerage Services</a> | <a href="https://www.trec.texas.gov/sites/default/files/pdf-forms/CN%201-5_0.pdf" target="_blank" rel="noopener">Consumer Protection Notice</a></div>
+          <div class="legal-section-title" style="margin-top:20px;">Affiliated Business Disclosure</div>
+          <p class="legal-text">
+            Hometown Lend Lending is an affiliated business of Elite Living Realty. All mortgage lending products and information are provided by
+            Hometown Lending, LLC | NMLS #2712965; <a href="https://www.nmlsconsumeraccess.org/" target="_blank" rel="noopener">www.NMLSConsumerAccess.org</a>.
+            Licensed in multiple states. This site is not authorized by the Texas State Department of Financial Services for mortgage solicitation or loan applications activities related to properties located in the State of Texas.
+            For additional information on Hometown Lending or to receive lending services in the State of Texas, please visit
+            <a href="https://hometownlend.com/" target="_blank" rel="noopener">hometownlend.com</a>.
+          </p>
+          <p class="legal-note">
+            Affiliated Business Arrangement Notice:
+            <a href="https://drive.google.com/file/d/1-KgEXEzSbC_NTXHOrAtn9pvVi1qR6A_e/view?usp=sharing" target="_blank" rel="noopener">
+              View disclosure document
+            </a>.
+          </p>
+        </div>
+        <div>
+          <div class="legal-section-title">Accessibility</div>
+          <p class="legal-text">
+            If you are using a screen reader, or having trouble reading this website, please call Redfin Customer Support for help at
+            <a href="tel:18447597732">1-844-759-7732</a>.
+          </p>
+          <div class="legal-section-title" style="margin-top:14px;">Fair Housing</div>
+          <p class="legal-text">
+            Equal Housing Opportunity. ELITE LIVING REALTY IS COMMITTED TO AND ABIDES BY THE FAIR HOUSING ACT AND EQUAL OPPORTUNITY ACT.
+            Read our
+            <a href="https://www.elitelivingrealty.com/fair-housing-policy" target="_blank" rel="noopener">Fair Housing Policy</a>
+            and the
+            <a href="https://www.tdhca.texas.gov/" target="_blank" rel="noopener">Texas State Fair Housing Notice</a>.
+          </p>
+        </div>
+      </div>
+      <div class="legal-updated">Updated September 2025</div>
+      <div class="legal-links">
+        By searching, you agree to the
+        <a href="https://www.elitelivingrealty.com/terms-of-use" target="_blank" rel="noopener">Terms of Use</a>,
+        and
+        <a href="https://www.elitelivingrealty.com/privacy-policy" target="_blank" rel="noopener">Privacy Policy</a>.
+        &nbsp;<a href="https://www.elitelivingrealty.com/opt-out" target="_blank" rel="noopener">Do not sell or share my personal information</a>.
+      </div>
+    </div>
+  </footer>
 
-    // About modals
-    const openModal = (modalId, content) => {
-      const modal = document.getElementById(modalId);
-      const modalContentDiv = modal.querySelector('.modal-text-content');
-      modalContentDiv.innerHTML = content;
-      modal.classList.add('show');
-      document.body.style.overflow = 'hidden';
-    };
-    const closeModal = (modalId) => {
-      document.getElementById(modalId).classList.remove('show');
-      document.body.style.overflow = '';
-    };
-    document.getElementById('aboutClose').onclick = () => closeModal('aboutModal');
-    document.getElementById('aboutClose2').onclick = () => closeModal('aboutModal');
-    document.getElementById('builderClose').onclick = () => closeModal('builderModal');
-    document.getElementById('builderClose2').onclick = () => closeModal('builderModal');
-    document.getElementById('agentClose').onclick = () => closeModal('agentModal');
-    document.getElementById('agentClose2').onclick = () => closeModal('agentModal');
-    document.querySelectorAll('.modal').forEach(modal => {
-      modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(modal.id); });
-    });
-    window.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(modal => closeModal(modal.id));
-    });
+  <script>
+    /* Reveal on scroll */
+    const onScrollReveal=()=>{document.querySelectorAll('.reveal').forEach(el=>{const r=el.getBoundingClientRect();if(r.top<window.innerHeight*0.8){el.classList.add('visible')}})};
+    window.addEventListener('scroll',onScrollReveal);window.addEventListener('load',onScrollReveal);
 
-    // Lightbox
-    let lbIndex = 0; let lbImages = [];
-    const mainGalleryImg = document.getElementById('mainGalleryImg');
-    function updateMainImage(index) {
-      if (lbImages.length > 0) {
-        mainGalleryImg.src = lbImages[index];
-        mainGalleryImg.alt = `Gallery image ${index + 1}`;
-        lbIndex = index;
-      }
-    }
-    function openLightbox(i){ lbIndex = i; updateLightbox(); document.getElementById('lightbox').classList.add('show'); document.body.style.overflow='hidden'; }
-    function closeLightbox(){ document.getElementById('lightbox').classList.remove('show'); document.body.style.overflow=''; }
-    function updateLightbox(){ const img = document.getElementById('lightboxImg'); img.src = lbImages[lbIndex]; if (lbImages[lbIndex + 1]) new Image().src = lbImages[lbIndex + 1]; if (lbImages[lbIndex - 1]) new Image().src = lbImages[lbIndex - 1]; }
-    document.getElementById('lightboxClose').onclick = closeLightbox;
-    document.getElementById('lightboxPrev').onclick = ()=>{ lbIndex = (lbIndex-1+lbImages.length)%lbImages.length; updateLightbox(); };
-    document.getElementById('lightboxNext').onclick = ()=>{ lbIndex = (lbIndex+1)%lbImages.length; updateLightbox(); };
+    /* Modals */
+    const openModal=(id,content)=>{const m=document.getElementById(id);m.querySelector('.modal-text-content').innerHTML=content;m.classList.add('show');document.body.style.overflow='hidden'};
+    const closeModal=id=>{document.getElementById(id).classList.remove('show');document.body.style.overflow=''};
+    document.getElementById('aboutClose').onclick=()=>closeModal('aboutModal');
+    document.getElementById('builderClose').onclick=()=>closeModal('builderModal');
+    document.getElementById('agentClose').onclick=()=>closeModal('agentModal');
+    document.querySelectorAll('.modal').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeModal(m.id)}));
+    window.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.modal.show').forEach(m=>closeModal(m.id))});
 
-    // Haversine distance (miles)
-    function haversine(lat1, lon1, lat2, lon2) {
-      const R = 3958.8;
-      const φ1 = lat1 * Math.PI / 180, φ2 = lat2 * Math.PI / 180;
-      const Δφ = (lat2 - lat1) * Math.PI / 180, Δλ = (lon2 - lon1) * Math.PI / 180;
-      const a = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
-      return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-    }
+    /* Lightbox */
+    let lbIndex=0,lbImages=[];const mainGalleryImg=document.getElementById('mainGalleryImg');
+    function updateMainImage(i){if(lbImages.length>0){mainGalleryImg.src=lbImages[i];mainGalleryImg.alt=`Gallery image ${i+1}`;lbIndex=i}}
+    function openLightbox(i){lbIndex=i;updateLightbox();document.getElementById('lightbox').classList.add('show');document.body.style.overflow='hidden'}
+    function closeLightbox(){document.getElementById('lightbox').classList.remove('show');document.body.style.overflow=''}
+    function updateLightbox(){const img=document.getElementById('lightboxImg');img.src=lbImages[lbIndex];if(lbImages[lbIndex+1])new Image().src=lbImages[lbIndex+1];if(lbImages[lbIndex-1])new Image().src=lbImages[lbIndex-1]}
+    document.getElementById('lightboxClose').onclick=closeLightbox;
+    document.getElementById('lightboxPrev').onclick=()=>{lbIndex=(lbIndex-1+lbImages.length)%lbImages.length;updateLightbox()};
+    document.getElementById('lightboxNext').onclick=()=>{lbIndex=(lbIndex+1)%lbImages.length;updateLightbox()};
 
-    function searchAndDisplayAmenities(p, listId, queryTypes, title) {
-      const list = document.getElementById(listId);
-      list.innerHTML = '<li class="nearby-item"><small>Searching for nearby ' + title.toLowerCase() + '...</small></li>';
-      const query = `[out:json][timeout:25];
-        ( node["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
-          way["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
-          relation["amenity"~"${queryTypes}"](around:2000,${p.Latitude},${p.Longitude});
-        ); out center 20;`;
-      fetch('https://overpass-api.de/api/interpreter', {
-        method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},
-        body:'data='+encodeURIComponent(query)
-      }).then(r=>r.json()).then(data=>{
-        list.innerHTML = '';
-        if (!data.elements || data.elements.length === 0) {
-          list.innerHTML = '<li class="nearby-item"><small>No nearby ' + title.toLowerCase() + ' found.</small></li>'; return;
-        }
-        const seen = new Set();
-        data.elements.forEach(el => {
-          if (el.tags && el.tags.name && !seen.has(el.tags.name)) {
-            seen.add(el.tags.name);
-            const li = document.createElement('li');
-            li.className = 'nearby-item';
-            const amenityType = el.tags.amenity ? el.tags.amenity.replace('_', ' ') : 'Place';
-            const lat = el.lat || (el.center && el.center.lat);
-            const lon = el.lon || (el.center && el.center.lon);
-            const distance = lat && lon ? haversine(p.Latitude, p.Longitude, lat, lon).toFixed(1) : 'N/A';
-            const address = el.tags['addr:street'] ? `${el.tags['addr:street']}` : '';
-            li.innerHTML = `<strong>${el.tags.name}</strong><p>${address} • ${distance} miles</p><small>${amenityType}</small>`;
-            list.appendChild(li);
-          }
-        });
-      }).catch(e=>{
-        console.error("Overpass API error:", e);
-        list.innerHTML = '<li class="nearby-item"><small>Failed to load nearby ' + title.toLowerCase() + '.</small></li>';
-      });
-    }
+    /* Haversine */
+    function haversine(lat1,lon1,lat2,lon2){const R=3958.8;const φ1=lat1*Math.PI/180,φ2=lat2*Math.PI/180;const Δφ=(lat2-lat1)*Math.PI/180,Δλ=(lon2-lon1)*Math.PI/180;const a=Math.sin(Δφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)))}
 
-    function initMapLeaflet(p){
-      const mapEl = document.getElementById('map');
-      if (!p.Latitude || !p.Longitude){ mapEl.innerHTML = '<div style="padding:20px; text-align:center; color:var(--muted);">Location not available.</div>'; return; }
-      const center = [p.Latitude, p.Longitude];
-      const map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: false }).setView(center, 14);
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors' }).addTo(map);
-      L.marker(center).addTo(map).bindPopup(`<b>${p['Project Name'] || 'Project'}</b><br>${p.Address || 'Location'}`).openPopup();
-      searchAndDisplayAmenities(p, 'nearbyList', 'restaurant|hospital|cafe|bar|park|supermarket|pharmacy|bank|fitness_centre', 'amenities');
-      searchAndDisplayAmenities(p, 'schoolsList', 'school', 'schools');
-    }
+    function searchAndDisplayAmenities(p,listId,types,title){
+      const list=document.getElementById(listId);
+      list.innerHTML='<li class="nearby-item"><small>Searching for nearby '+title.toLowerCase()+'...</small></li>';
+      const q=`[out:json][timeout:25];
+        ( node["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
+          way["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
+          relation["amenity"~"${types}"](around:2000,${p.Latitude},${p.Longitude});
+        ); out center 20;`;
+      fetch('https://overpass-api.de/api/interpreter',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded; charset=UTF-8'},body:'data='+encodeURIComponent(q)})
+      .then(r=>r.json()).then(data=>{
+        list.innerHTML=''; if(!data.elements||data.elements.length===0){list.innerHTML='<li class="nearby-item"><small>No nearby '+title.toLowerCase()+' found.</small></li>';return}
+        const seen=new Set(); data.elements.forEach(el=>{
+          if(el.tags&&el.tags.name&&!seen.has(el.tags.name)){
+            seen.add(el.tags.name);
+            const lat=el.lat||(el.center&&el.center.lat); const lon=el.lon||(el.center&&el.center.lon);
+            const distance=lat&&lon?haversine(p.Latitude,p.Longitude,lat,lon).toFixed(1):'N/A';
+            const address=el.tags['addr:street']?`${el.tags['addr:street']}`:'';
+            const li=document.createElement('li'); li.className='nearby-item';
+            li.innerHTML=`<strong>${el.tags.name}</strong><p>${address} • ${distance} miles</p><small>${(el.tags.amenity||'Place').replace('_',' ')}</small>`;
+            list.appendChild(li);
+          }
+        });
+      }).catch(e=>{console.error("Overpass API error:",e);list.innerHTML='<li class="nearby-item"><small>Failed to load nearby '+title.toLowerCase()+'.</small></li>'});
+    }
 
-    // ---------- SAFE COERCION ----------
-    function asText(v) {
-      if (v == null) return "";
-      if (typeof v === "string") return v;
-      if (Array.isArray(v)) {
-        return v.map(x =>
-          typeof x === "string" ? x :
-          (x && typeof x === "object" && "text" in x) ? String(x.text) :
-          (x && x.url) ? x.url :
-          String(x)
-        ).join(", ");
-      }
-      if (typeof v === "object") {
-        if ("text" in v) return String(v.text);
-        try { return JSON.stringify(v); } catch (e) { return String(v); }
-      }
-      return String(v);
-    }
+    function initMapLeaflet(p){
+      const mapEl=document.getElementById('map');
+      if(!p.Latitude||!p.Longitude){mapEl.innerHTML='<div style="padding:20px; text-align:center; color:var(--muted);">Location not available.</div>';return}
+      const center=[p.Latitude,p.Longitude];
+      const map=L.map(mapEl,{zoomControl:true,scrollWheelZoom:false}).setView(center,14);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19,attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'}).addTo(map);
+      L.marker(center).addTo(map).bindPopup(`<b>${p['Project Name']||'Project'}</b><br>${p.Address||'Location'}`).openPopup();
+      searchAndDisplayAmenities(p,'nearbyList','restaurant|hospital|cafe|bar|park|supermarket|pharmacy|bank|fitness_centre','amenities');
+      searchAndDisplayAmenities(p,'schoolsList','school','schools');
+    }
 
-    function populate(p){
-      // Hero
-      const hero = document.getElementById('heroBg');
-      const heroSrc = asText(p.HeroImageURL) || (asText(p.GalleryURLsCSV).split(',')[0] || '').trim();
-      if (heroSrc) hero.style.backgroundImage = `url('${heroSrc}')`;
-      document.getElementById('projectName').textContent = asText(p['Project Name']) || 'New Development';
-      document.getElementById('projectAddress').textContent = asText(p.Address) || 'Address not available';
+    /* Safe coercion */
+    function asText(v){
+      if(v==null)return "";
+      if(typeof v==="string")return v;
+      if(Array.isArray(v)){
+        return v.map(x=>typeof x==="string"?x:(x&&typeof x==="object"&&"text"in x)?String(x.text):(x&&x.url)?x.url:String(x)).join(", ");
+      }
+      if(typeof v==="object"){ if("text" in v) return String(v.text); try{return JSON.stringify(v)}catch(e){return String(v)} }
+      return String(v);
+    }
 
-      // Elite badge
-      const priceStr = asText(p['Listing Price']);
-      const num = Number(String(priceStr).replace(/[^0-9.]/g,''));
-      if (num > 1000000) document.getElementById('eliteBadge').classList.remove('hidden');
-      else document.getElementById('eliteBadge').classList.add('hidden');
+    function bulletsFrom(text){
+      const s=asText(text).trim();
+      if(!s) return [];
+      const parts = s.includes('\n') ? s.split(/\n+/) : s.split(/,|•|·/);
+      return parts.map(x=>x.trim()).filter(Boolean);
+    }
 
-      // At a Glance
-      const gl = document.getElementById('glanceList'); gl.innerHTML = '';
-      const completionDate = p['Estimated Completion'] ? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 'N/A';
-      const formattedPrice = priceStr ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
-      const glanceData = {
-        'Status': asText(p.Status) || 'N/A',
-        'Price': formattedPrice,
-        'Beds': asText(p.Beds) || 'N/A',
-        'Baths': asText(p.Baths) || 'N/A',
-        'Sq Footage': (asText(p['Sq Footage']) ? `${asText(p['Sq Footage'])} sq ft` : 'N/A'),
-        'Estimated Completion': completionDate
-      };
-      Object.entries(glanceData).forEach(([k,v])=>{ if (v && v !== 'N/A') { const li = document.createElement('li'); li.innerHTML = `<span>${k}</span><span>${v}</span>`; gl.appendChild(li); } });
-      if (asText(p['Site Plans'])) { const li = document.createElement('li'); li.innerHTML = `<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`; gl.appendChild(li); }
+    function populate(p){
+      // Hero
+      const hero=document.getElementById('heroBg');
+      const heroSrc=asText(p.HeroImageURL)||(asText(p.GalleryURLsCSV).split(',')[0]||'').trim();
+      if(heroSrc) hero.style.backgroundImage=`url('${heroSrc}')`;
+      document.getElementById('projectName').textContent=asText(p['Project Name'])||'New Development';
+      document.getElementById('projectAddress').textContent=asText(p.Address)||'Address not available';
 
-      // About
-      const aboutHomeFull = document.getElementById('aboutFull');
-      const aboutTextHome = asText(p.Description) || 'No description available for this property.';
-      aboutHomeFull.innerHTML = `<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g, "\\'")}</p>\`)">Read More</button>`;
+      // Elite badge
+      const priceStr=asText(p['Listing Price']); const num=Number(String(priceStr).replace(/[^0-9.]/g,''));
+      if(num>1000000)document.getElementById('eliteBadge').classList.remove('hidden'); else document.getElementById('eliteBadge').classList.add('hidden');
 
-      // NEW: Highlights & Amenities
-      const highlightsContent = document.getElementById('highlightsContent');
-      const highlightsText = asText(p['Highlights and Amenities']);
-      if (highlightsText) {
-        highlightsContent.innerHTML = `<p>${highlightsText}</p>`;
-        document.getElementById('highlightsCard').style.display = 'block';
-      } else {
-        document.getElementById('highlightsCard').style.display = 'none';
-      }
+      // Glance
+      const gl=document.getElementById('glanceList'); gl.innerHTML='';
+      const completionDate=p['Estimated Completion']?new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}):'N/A';
+      const formattedPrice=priceStr?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))):'N/A';
+      const glanceData={'Status':asText(p.Status)||'N/A','Price':formattedPrice,'Beds':asText(p.Beds)||'N/A','Baths':asText(p.Baths)||'N/A','Sq Footage':(asText(p['Sq Footage'])?`${asText(p['Sq Footage'])} sq ft`:'N/A'),'Estimated Completion':completionDate};
+      Object.entries(glanceData).forEach(([k,v])=>{if(v&&v!=='N/A'){const li=document.createElement('li');li.innerHTML=`<span>${k}</span><span>${v}</span>`;gl.appendChild(li)}});
+      if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li)}
 
-      // Gallery
-      lbImages = asText(p.GalleryURLsCSV).split(',').map(s => s.trim()).filter(Boolean);
-      const galleryThumbsContainer = document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML = '';
-      if (lbImages.length > 0) { updateMainImage(0); } else { mainGalleryImg.src = 'https://via.placeholder.com/800x450?text=No+Images+Available'; mainGalleryImg.alt='No images available'; }
-      lbImages.forEach((src, i) => { const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick = () => openLightbox(i); });
+      // About Home
+      const aboutHome=document.getElementById('aboutFull');
+      const aboutTextHome=asText(p.Description)||'No description available for this property.';
+      aboutHome.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Builder
-      const builderNames  = asText(p['Builder Owners']).split(',').map(s => s.trim()).filter(Boolean);
-      const builderPhotos = asText(p['Builder Photo']).split(',').map(s => s.trim()).filter(Boolean);
-      const builderTitles = asText(p['Builder Owner Titles']).split(',').map(s => s.trim()).filter(Boolean);
-      const builderCardsContainer = document.getElementById('builderCards'); builderCardsContainer.innerHTML = '';
-      if (builderNames.length === 0) { builderCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Builder information not available.</p>'; }
-      builderNames.forEach((name, i) => {
-        const title = builderTitles[i] || 'Builder';
-        const aboutText = `Meet ${name}, a dedicated builder with expertise in ${title}. They are committed to crafting high-quality homes with exceptional attention to detail and customer satisfaction.`;
-        const photoUrl = builderPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
-        const cardHtml = `
-          <div class="card reveal builder-card">
-            <div class="agent-top">
-              <img src="${photoUrl}" class="agent-avatar" alt="${name}">
-              <div class="agent-meta">
-                <div class="agent-name">${name}</div>
-                <div class="agent-tag">${title}</div>
-              </div>
-            </div>
-            <p class="about-line">${aboutText}</p>
-            <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g, "\\'")}</p>\`)">Read More</button>
-          </div>`;
-        builderCardsContainer.innerHTML += cardHtml;
-      });
+      // Gallery
+      lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
+      const thumbs=document.getElementById('galleryThumbs'); thumbs.innerHTML='';
+      if(lbImages.length>0){updateMainImage(0)}else{mainGalleryImg.src='https://via.placeholder.com/800x450?text=No+Images+Available';mainGalleryImg.alt='No images available'}
+      lbImages.forEach((src,i)=>{const d=document.createElement('div');d.className='thumb';d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`;thumbs.appendChild(d);d.onclick=()=>openLightbox(i)});
 
-      // Agents (SAFE)
-      const agentNames = asText(p['Listing Agent 2']).split(',').map(s => s.trim()).filter(Boolean);
-      const agentPhotos = asText(p['Agent Photo']).split(',').map(s => s.trim()).filter(Boolean);
-      const agentEmails = asText(p['Agent Email']).split(',').map(s => s.trim()).filter(Boolean);
-      const agentPhones = asText(p['Agent Phone Number']).split(',').map(s => s.trim()).filter(Boolean);
-      const agentTitles = asText(p['Agent Title']).split(',').map(s => s.trim()).filter(Boolean);
-      const aboutAgents = asText(p['About Agent']).split('|').map(s => s.trim()).filter(Boolean); // Split by |
-      const agentCardsContainer = document.getElementById('agentCards'); agentCardsContainer.innerHTML = '';
+      // Builder
+      const builderNames=asText(p['Builder Owners']).split(',').map(s=>s.trim()).filter(Boolean);
+      const builderPhotos=asText(p['Builder Photo']).split(',').map(s=>s.trim()).filter(Boolean);
+      const builderTitles=asText(p['Builder Owner Titles']).split(',').map(s=>s.trim()).filter(Boolean);
+      const builderWrap=document.getElementById('builderCards'); builderWrap.innerHTML='';
+      if(builderNames.length===0){builderWrap.innerHTML='<p style="text-align:center;color:var(--muted);">Builder information not available.</p>'}
+      builderNames.forEach((name,i)=>{const title=builderTitles[i]||'Builder';const about=`Meet ${name}, a dedicated builder with expertise in ${title}.`;const photo=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';builderWrap.innerHTML+=`
+        <div class="card reveal builder-card">
+          <div class="agent-top">
+            <img src="${photo}" class="agent-avatar" alt="${name}">
+            <div class="agent-meta"><div class="agent-name">${name}</div><div class="agent-tag">${title}</div></div>
+          </div>
+          <p class="about-line">${about}</p>
+          <button class="btn" onclick="openModal('builderModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+        </div>`});
 
-      if (agentNames.length === 0) { agentCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Agent information not available.</p>'; }
-      agentNames.forEach((name, i) => {
-        const tel = (agentPhones[i] || '').replace(/[^0-9+]/g,'');
-        const email = agentEmails[i] || '';
-        const title = agentTitles[i] || 'Real Estate Agent';
-        const aboutText = aboutAgents[i] || 'No detailed bio available.';
-        const firstDot = aboutText.indexOf('.');
-        const excerpt = firstDot >= 0 ? aboutText.slice(0, firstDot + 1) : aboutText;
-        const photoUrl = agentPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-        const cardHtml = `
-          <div class="card reveal agent-card">
-            <div class="agent-top">
-              <img src="${photoUrl}" class="agent-avatar" alt="${name}" />
-              <div class="agent-meta">
-                <div class="agent-name">${name}</div>
-                <div class="agent-tag">${title}</div>
-              </div>
-            </div>
-            <p class="about-line">${excerpt}</p>
-            <button class="btn" onclick="openModal('agentModal', \`<p>${aboutText.replace(/'/g, "\\'")}</p>\`)">Read More</button>
-            <div class="agent-actions">
-              ${tel ? `<a href="tel:${tel}" class="icon-btn" title="Call ${name}"><span>📞</span> Call</a>` : ''}
-              ${tel ? `<a href="sms:${tel}" class="icon-btn" title="Text ${name}"><span>💬</span> Text</a>` : ''}
-              ${email ? `<a href="mailto:${email}" class="icon-btn" title="Email ${name}"><span>✉️</span> Email</a>` : ''}
-            </div>
-          </div>`;
-        agentCardsContainer.innerHTML += cardHtml;
-      });
+      // Agents — names from "Listing Agent 2" and bios per agent
+      const agentNames=asText(p['Listing Agent 2']).split(',').map(s=>s.trim()).filter(Boolean);
+      const agentPhotos=asText(p['Agent Photo']).split(',').map(s=>s.trim()).filter(Boolean);
+      const agentEmails=asText(p['Agent Email']).split(',').map(s=>s.trim()).filter(Boolean);
+      const agentPhones=asText(p['Agent Phone Number']).split(',').map(s=>s.trim()).filter(Boolean);
+      const agentTitles=asText(p['Agent Title']).split(',').map(s=>s.trim()).filter(Boolean);
 
+      // Try specific fields About Agent 1/2, else split the combined About Agent into parts
+      const about1=asText(p['About Agent 1'])||asText(p['Agent 1 About']);
+      const about2=asText(p['About Agent 2'])||asText(p['Agent 2 About']);
+      let combined=asText(p['About Agent']);
+      let parts=[];
+      if(about1||about2){parts=[about1,about2].filter(v=>v!=null)}
+      else if(combined){
+        if(combined.includes('||')) parts=combined.split('||');
+        else if(/\n-{3,}\n/.test(combined)) parts=combined.split(/\n-{3,}\n/);
+        else if(/\n\n+/.test(combined)) parts=combined.split(/\n\n+/);
+        else parts=[combined]; // single blob fallback
+      }
+      const agentWrap=document.getElementById('agentCards'); agentWrap.innerHTML='';
+      if(agentNames.length===0){agentWrap.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>'}
+      agentNames.forEach((name,i)=>{
+        const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,''); const email=agentEmails[i]||''; const title=agentTitles[i]||'Real Estate Agent';
+        const about = (parts[i] ? asText(parts[i]) : combined) || 'No detailed bio available.';
+        const firstDot=about.indexOf('.'); const excerpt=firstDot>=0?about.slice(0,firstDot+1):about;
+        const photo=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+        agentWrap.innerHTML+=`
+          <div class="card reveal agent-card">
+            <div class="agent-top">
+              <img src="${photo}" class="agent-avatar" alt="${name}" />
+              <div class="agent-meta"><div class="agent-name">${name}</div><div class="agent-tag">${title}</div></div>
+            </div>
+            <p class="about-line">${excerpt}</p>
+            <button class="btn" onclick="openModal('agentModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+            <div class="agent-actions">
+              ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${name}"><span>📞</span> Call</a>`:''}
+              ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${name}"><span>💬</span> Text</a>`:''}
+              ${email?`<a href="mailto:${email}" class="icon-btn" title="Email ${name}"><span>✉️</span> Email</a>`:''}
+            </div>
+          </div>`;
+      });
 
-      // NEW: Media embeds
-      const mediaEmbedsContainer = document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML = '';
-      const preDrywallMatterportUrl = asText(p['Pre Dry Wall Matterport']);
-      const finalMatterportUrl = asText(p['Final Matterport']);
-      const marketingVideoUrl = asText(p['Marketing Video']);
+      // NEW: Highlights & Amenities card content
+      const highlights = bulletsFrom(p['Highlights']);
+      const amenities  = bulletsFrom(p['Amenities']);
+      if (highlights.length || amenities.length){
+        const wrap=document.getElementById('highlightsCard');
+        const content=document.getElementById('highlightsAmenitiesContent');
+        let html='';
+        if(highlights.length){ html+=`<h4 style="margin:6px 0 6px;">Highlights</h4><ul>${highlights.map(i=>`<li>${i}</li>`).join('')}</ul>`; }
+        if(amenities.length){ html+=`<h4 style="margin:10px 0 6px;">Amenities</h4><ul>${amenities.map(i=>`<li>${i}</li>`).join('')}</ul>`; }
+        content.innerHTML=html; wrap.style.display='';
+      }
 
-      let mediaContent = '';
-      let hasMedia = false;
+      // Media (two Matterport side-by-side; video BELOW them)
+      const media=document.getElementById('mediaEmbeds'); media.innerHTML='';
+      const pre=asText(p['Pre Dry Wall Matterport']); const fin=asText(p['Final Matterport']); const vid=asText(p['Marketing Video']);
+      const mp=[]; if(pre && pre!=='N/A'){ mp.push(`<div class="card reveal"><h3>Pre Dry Wall Matterport</h3><div class="embed"><iframe src="${pre}" title="Pre Dry Wall Matterport" allowfullscreen></iframe></div></div>`); }
+      if(fin && fin!=='N/A'){ mp.push(`<div class="card reveal"><h3>Final Matterport</h3><div class="embed"><iframe src="${fin}" title="Final Matterport" allowfullscreen></iframe></div></div>`); }
+      if(mp.length){ media.innerHTML += `<h3>Virtual Tours</h3><div class="matterport-grid">${mp.join('')}</div>`; }
+      if(vid && vid!=='N/A'){ media.innerHTML += `<h3>Video Tour</h3><div class="card reveal marketing-video"><div class="embed"><iframe src="${vid}" title="Marketing Video" allowfullscreen></iframe></div></div>`; }
 
-      const matterportEmbeds = [];
-      if (preDrywallMatterportUrl && preDrywallMatterportUrl !== 'N/A') {
-        matterportEmbeds.push(`
-          <div class="card reveal">
-            <h3>Pre Dry Wall Matterport</h3>
-            <div class="embed">
-              <iframe src="${preDrywallMatterportUrl}" title="Pre Dry Wall Matterport" allowfullscreen></iframe>
-            </div>
-          </div>
-        `);
-        hasMedia = true;
-      }
-      if (finalMatterportUrl && finalMatterportUrl !== 'N/A') {
-        matterportEmbeds.push(`
-          <div class="card reveal">
-            <h3>Final Matterport</h3>
-            <div class="embed">
-              <iframe src="${finalMatterportUrl}" title="Final Matterport" allowfullscreen></iframe>
-            </div>
-          </div>
-        `);
-        hasMedia = true;
-      }
+      // Map
+      initMapLeaflet(p);
+    }
 
-      if (matterportEmbeds.length > 0) {
-        mediaContent += `<h3>Virtual Tours</h3><div class="matterport-grid">${matterportEmbeds.join('')}</div>`;
-      }
+    /* Airtable via Netlify Function */
+    async function fetchProject(slug){
+      const res=await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
+      if(!res.ok) throw new Error(`API error ${res.status}`);
+      const data=await res.json();
+      if(!data||!data.project) throw new Error("Project not found");
+      return data.project;
+    }
 
-      if (marketingVideoUrl && marketingVideoUrl !== 'N/A') {
-        mediaContent += `<div class="card reveal marketing-video"><h3>Video Tour</h3><div class="embed"><iframe src="${marketingVideoUrl}" title="Marketing Video" allowfullscreen></iframe></div></div>`;
-        hasMedia = true;
-      }
+    window.addEventListener('DOMContentLoaded',async()=>{
+      try{
+        const params=new URLSearchParams(location.search);
+        const slug=(params.get("project")||"").trim();
+        if(!slug) throw new Error("Missing ?project= slug in URL");
+        const project=await fetchProject(slug);
+        populate(project);
+        onScrollReveal();
+      }catch(e){
+        console.error("Error loading project data:",e);
+        const main=document.getElementById("main");
+        if(main){
+          main.innerHTML=`<div class="card reveal visible" style="margin:20px; text-align:center; padding:26px;">
+            <h3>Oops!</h3>
+            <p>We couldn't load the project details. Check the URL (?project=Your-Slug) and try again.</p>
+            <p><small>${e.message}</small></p>
+            <a href="/" class="btn" style="margin-top:16px;">Go to Home</a>
+          </div>`;
+        }
+      }
+    });
+  </script>
 
-      if (hasMedia) { mediaEmbedsContainer.innerHTML = mediaContent; }
-      else { mediaEmbedsContainer.innerHTML = '<div class="card reveal"><p style="text-align:center; color:var(--muted);">No media embeds available for this property.</p></div>'; }
-
-
-      // Map
-      initMapLeaflet(p);
-    }
-
-    // --- Airtable fetch via Netlify Function ---
-    async function fetchProject(slug){
-      const res = await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
-      if (!res.ok) throw new Error(`API error ${res.status}`);
-      const data = await res.json();
-      if (!data || !data.project) throw new Error("Project not found");
-      return data.project;
-    }
-
-    window.addEventListener('DOMContentLoaded', async () => {
-      try {
-        const params = new URLSearchParams(location.search);
-        const slug = (params.get("project") || "").trim();
-        if (!slug) throw new Error("Missing ?project= slug in URL");
-        const project = await fetchProject(slug);
-        populate(project);
-        onScrollReveal();
-      } catch (e) {
-        console.error("Error loading project data:", e);
-        const mainContent = document.getElementById("main");
-        if (mainContent) {
-          mainContent.innerHTML = `<div class="card reveal visible" style="margin:24px; text-align:center; padding:30px;">
-            <h3>Oops!</h3>
-            <p>We couldn't load the project details. Check the URL (?project=Your-Slug) and try again.</p>
-            <p><small>${e.message}</small></p>
-            <a href="/" class="btn" style="margin-top:20px;">Go to Home</a>
-          </div>`;
-        }
-      }
-    });
-  </script>
-
-    <script>
-    (function () {
-      window.LC_API = window.LC_API || {};
-      window.LC_API.on_after_load = function () {
-        if (window.LC_API && typeof window.LC_API.open_chat === "function") {
-          window.LC_API.open_chat();
-        }
-      };
-      var s = document.createElement("script");
-      s.src = "https://beta.leadconnectorhq.com/loader.js";
-      s.async = true;
-      s.setAttribute("data-resources-url", "https://beta.leadconnectorhq.com/chat-widget/loader.js");
-      s.setAttribute("data-widget-id", "68ae95eb6d8a7f8237ababc5");
-      document.body.appendChild(s);
-      var tries = 0, max = 200;
-      var poll = setInterval(function () {
-        tries++;
-        if (window.LC_API && typeof window.LC_API.open_chat === "function") {
-          try { window.LC_API.open_chat(); } catch (e) {}
-          clearInterval(poll);
-        }
-        if (tries >= max) clearInterval(poll);
-      }, 50);
-    })();
-  </script>
+  <!-- LeadConnector Chat -->
+  <script>
+    (function(){
+      window.LC_API=window.LC_API||{};
+      window.LC_API.on_after_load=function(){ if(window.LC_API && typeof window.LC_API.open_chat==="function"){ window.LC_API.open_chat(); } };
+      var s=document.createElement("script"); s.src="https://beta.leadconnectorhq.com/loader.js"; s.async=true;
+      s.setAttribute("data-resources-url","https://beta.leadconnectorhq.com/chat-widget/loader.js");
+      s.setAttribute("data-widget-id","68ae95eb6d8a7f8237ababc5");
+      document.body.appendChild(s);
+      var tries=0,max=200; var poll=setInterval(function(){
+        tries++; if(window.LC_API && typeof window.LC_API.open_chat==="function"){ try{window.LC_API.open_chat()}catch(e){} clearInterval(poll); }
+        if(tries>=max) clearInterval(poll);
+      },50);
+    })();
+  </script>
 </body>
 </html>
