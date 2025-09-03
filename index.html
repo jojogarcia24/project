@@ -165,19 +165,6 @@
     .reveal.visible { opacity:1; transform: translateY(0); }
     @keyframes zoompan { 0% { transform: scale(1.05); } 100% { transform: scale(1.15); } }
     @keyframes pulseGlow { 0% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } 50% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 30px var(--glow-accent); } 100% { box-shadow:0 0 20px rgba(0,0,0,.6) inset, 0 0 15px var(--glow-accent); } }
-    
-    /* New & Corrected Styles for Mobile Responsiveness */
-    .content-wrapper { display: flex; flex-direction: column; gap: 24px; }
-    .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
-    .full-width-section { width: 100%; }
-    @media (max-width: 980px) {
-      .content, .sidebar { width: 100%; }
-      .layout { grid-template-columns: 1fr; }
-    }
-    @media (max-width: 768px) {
-      .grid-container { grid-template-columns: 1fr; }
-      .card.builder-card, .card.agent-card { min-width: unset; width: 100%; }
-    }
   </style>
 </head>
 <body>
@@ -218,32 +205,31 @@
         <ul id="schoolsList" class="nearby-list"></ul>
       </div>
     </aside>
-    <section class="content content-wrapper">
-      <div class="card reveal full-width-section">
+    <section class="content">
+      <section class="card reveal gallery-section">
         <h3>Photo Gallery</h3>
         <div class="gallery-main-img-wrap">
           <img id="mainGalleryImg" class="gallery-main-img" src="" alt="Main gallery image">
         </div>
         <div id="galleryThumbs" class="gallery-thumbs"></div>
-      </div>
-      <div class="card reveal full-width-section">
+      </section>
+      <div class="card reveal">
         <h3>Listing Agents</h3>
         <div id="agentCards" class="card-container"></div>
       </div>
-      <div class="card reveal full-width-section">
+      <div class="card reveal">
         <h3>Highlights and Amenities</h3>
         <ul id="highlightsList" class="highlights-list"></ul>
       </div>
-      <div class="card reveal full-width-section">
+      <div class="card reveal">
         <h3>Map</h3>
         <div id="map" class="map"></div>
       </div>
-      <div class="card reveal full-width-section">
+      <div class="card reveal">
         <h3>Builder</h3>
         <div id="builderCards" class="card-container"></div>
       </div>
-      <div id="virtualTours" class="full-width-section"></div>
-      <div id="videoTour" class="full-width-section"></div>
+      <div id="mediaEmbeds" class="media-section"></div>
     </section>
   </main>
   <div id="aboutModal" class="modal">
@@ -438,6 +424,36 @@
       }
       return String(v);
     }
+    <script>
+      function toEmbed(raw) {
+        const url = (raw || "").trim();
+        if (!url) return "";
+
+        // --- Matterport ---
+        if (/matterport\.com/i.test(url)) {
+          // Accept: full share links or just an ID
+          const idMatch = url.match(/[?&]m=([A-Za-z0-9]+)|\/show\/\?m=([A-Za-z0-9]+)/i);
+          const onlyId   = url.match(/^[A-Za-z0-9]{8,}$/);
+          const id = (idMatch && (idMatch[1] || idMatch[2])) || (onlyId && onlyId[0]) || "";
+          return id ? `https://my.matterport.com/show/?m=${id}&play=1&brand=0&mls=1&qs=1&embed=1` : url;
+        }
+
+        // --- YouTube ---
+        if (/youtu\.be|youtube\.com/i.test(url)) {
+          // youtu.be/ID or youtube.com/watch?v=ID
+          const id = (url.match(/youtu\.be\/([A-Za-z0-9_-]+)/i) || [])[1] ||
+                     (url.match(/[?&]v=([A-Za-z0-9_-]+)/i) || [])[1] || "";
+          return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : url;
+        }
+
+        // --- Vimeo ---
+        if (/vimeo\.com/i.test(url)) {
+          const id = (url.match(/vimeo\.com\/(\d+)/) || [])[1] || "";
+          return id ? `https://player.vimeo.com/video/${id}` : url;
+        }
+
+        return url;
+      }</script>
     function populate(p){
       // Hero
       const hero = document.getElementById('heroBg');
@@ -515,14 +531,15 @@
       const agentEmails = asText(p['Agent Email']).split(',').map(s => s.trim()).filter(Boolean);
       const agentPhones = asText(p['Agent Phone Number']).split(',').map(s => s.trim()).filter(Boolean);
       const agentTitles = asText(p['Agent Title']).split(',').map(s => s.trim()).filter(Boolean);
-      const agentBios = asText(p['Agent Bio']).split('||').map(s => s.trim()); // Use a unique delimiter
       const agentCardsContainer = document.getElementById('agentCards'); agentCardsContainer.innerHTML = '';
       if (agentNames.length === 0) { agentCardsContainer.innerHTML = '<p style="text-align:center; color:var(--muted);">Agent information not available.</p>'; }
       agentNames.forEach((name, i) => {
         const tel = (agentPhones[i] || '').replace(/[^0-9+]/g,'');
         const email = agentEmails[i] || '';
         const title = agentTitles[i] || 'Real Estate Agent';
-        const aboutText = agentBios[i] || 'No biography available.';
+        const aboutText = name.toLowerCase().includes('cliff') ? 
+          'Cliff brings a wealth of experience in luxury real estate, focusing on client satisfaction and innovative marketing strategies.' :
+          'Your expertise lies in personalized service, ensuring clients find their dream homes with ease and confidence.';
         const excerpt = aboutText.split('.')[0] + '.';
         const photoUrl = agentPhotos[i] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
         const cardHtml = `
@@ -545,27 +562,58 @@
         agentCardsContainer.innerHTML += cardHtml;
       });
       // Media embeds
-      const virtualToursContainer = document.getElementById('virtualTours'); virtualToursContainer.innerHTML = '';
-      const videoTourContainer = document.getElementById('videoTour'); videoTourContainer.innerHTML = '';
-      const marketingVideoUrl = asText(p['Marketing Video']);
-      const preDrywallMatterportUrl = asText(p['Pre Dry Wall Matterport']);
-      const finalMatterportUrl = asText(p['Final Matterport']);
-      
-      let matterportContent = '';
-      if (preDrywallMatterportUrl && preDrywallMatterportUrl !== 'N/A') {
-        matterportContent += `<div class="card reveal"><h3>Pre Dry Wall Matterport</h3><div class="embed"><iframe src="${preDrywallMatterportUrl}" title="Pre Dry Wall Matterport" allowfullscreen></iframe></div></div>`;
-      }
-      if (finalMatterportUrl && finalMatterportUrl !== 'N/A') {
-        matterportContent += `<div class="card reveal"><h3>Final Matterport</h3><div class="embed"><iframe src="${finalMatterportUrl}" title="Final Matterport" allowfullscreen></iframe></div></div>`;
-      }
-      if (matterportContent) {
-        virtualToursContainer.innerHTML = `<div class="card reveal"><h3>Virtual Tours</h3><div class="matterport-grid">${matterportContent}</div></div>`;
-      }
-      
-      if (marketingVideoUrl && marketingVideoUrl !== 'N/A') {
-        videoTourContainer.innerHTML = `<div class="card reveal marketing-video"><h3>Video Tour</h3><div class="embed"><iframe src="${marketingVideoUrl}" title="Marketing Video" allowfullscreen></iframe></div></div>`;
-      }
-      
+      const mediaEmbedsContainer = document.getElementById('mediaEmbeds');
+      mediaEmbedsContainer.innerHTML = '';
+      const preRaw = asText(p['Pre Dry Wall Matterport']);
+      const finRaw = asText(p['Final Matterport']);
+      const vidRaw = asText(p['Marketing Video']);
+      const pre = toEmbed(preRaw);
+      const fin = toEmbed(finRaw);
+      const vid = toEmbed(vidRaw);
+      let html = '';
+      const mp = [];
+      if (pre) {
+        mp.push(`
+          <div class="card reveal">
+            <h3>Pre Dry Wall Matterport</h3>
+            <div class="embed">
+              <iframe src="${pre}" title="Pre Dry Wall Matterport"
+                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
+                allowfullscreen></iframe>
+            </div>
+          </div>
+        `);
+      }
+      if (fin) {
+        mp.push(`
+          <div class="card reveal">
+            <h3>Final Matterport</h3>
+            <div class="embed">
+              <iframe src="${fin}" title="Final Matterport"
+                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen"
+                allowfullscreen></iframe>
+            </div>
+          </div>
+        `);
+      }
+      if (mp.length) {
+        html += `<h3>Virtual Tours</h3><div class="matterport-grid">${mp.join('')}</div>`;
+      }
+      if (vid) {
+        html += `
+          <div class="card reveal marketing-video">
+            <h3>Video Tour</h3>
+            <div class="embed">
+              <iframe src="${vid}" title="Marketing Video" allow="autoplay; fullscreen" allowfullscreen></iframe>
+            </div>
+          </div>
+        `;
+      }
+
+      mediaEmbedsContainer.innerHTML = html || `
+        <div class="card reveal"><p style="text-align:center; color:var(--muted);">
+          No media embeds available for this property.</p>
+        </div>`;
       // Map
       initMapLeaflet(p);
     }
