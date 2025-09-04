@@ -31,10 +31,12 @@
     .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.65);animation:zoompan 35s infinite alternate ease-in-out;transform-origin:center center;width:100%;height:100%}
     .hero-overlay{position:absolute;inset:0;background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%),radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
     .hero-content{position:relative;z-index:5;text-shadow:0 4px 12px var(--shadow-dark);width:100%;max-width:100%}
+    /* CHANGED: Luxe font for hero title */
     .title-xl{font-size:clamp(32px,6vw,56px);font-family:'Cinzel', 'Times New Roman', serif;margin:0 0 8px;line-height:1.1;color:#fff}
     .subtitle{color:var(--muted);margin:0;font-size:1.1em}
     .elite-badge{display:inline-block;position:absolute;top:28px;right:28px;padding:8px 14px;border:1px solid var(--border);border-radius:999px;background:rgba(0,0,0,.95);box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent);color:#fff;font-weight:600;animation:pulseGlow 2s infinite alternate ease-in-out;letter-spacing:.5px}
     .hidden{display:none}
+    /* GRID */
     .layout{
       display:grid;
       grid-template-columns:minmax(0,350px) minmax(0,1fr);
@@ -83,9 +85,9 @@
     .glass{background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.04));backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15)}
     .card::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(102,179,255,.15) 50%,transparent);transform:translateX(-100%);transition:transform 1s ease-out;pointer-events:none;z-index:1}
     .card.reveal.visible::before{transform:translateX(100%)}
-    .glance-list,.nearby-list,.highlights-list,.amenities-list{list-style:none;padding:0;margin:0;width:100%}
-    .glance-list li,.highlights-list li,.amenities-list li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border);font-size:1.05em}
-    .glance-list li:last-child,.highlights-list li:last-child,.amenities-list li:last-child{border-bottom:none}
+    .glance-list,.nearby-list,.highlights-list{list-style:none;padding:0;margin:0;width:100%}
+    .glance-list li,.highlights-list li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border);font-size:1.05em}
+    .glance-list li:last-child,.highlights-list li:last-child{border-bottom:none}
     .nearby-item{padding:10px 0;border-bottom:1px dashed var(--border)}
     .nearby-item:last-child{border-bottom:none}
     .nearby-item strong{display:block;font-size:1.1em;color:var(--brand)}
@@ -113,7 +115,7 @@
     .map{height:400px;border-radius:14px;overflow:hidden;border:1px solid var(--border);box-shadow:0 6px 20px rgba(0,0,0,.3);width:100%}
     .leaflet-container{background:#0d101a}
     .leaflet-control-attribution{background:rgba(0,0,0,.6);border:1px solid var(--border);border-radius:8px!important;color:#ccc!important;padding:4px 8px;font-size:.8em}
-    .leaflet-popup-content-wrapper{background:#1a1a1a;color:var(--text);border:1px solid var(--border);border-radius:10px;box-shadow:0 5px 15px rgba(0,0,0,.4)}
+    .leaflet-popup-content-wrapper{background:#1a1a1a;color:var(--text);border:1px solid var(--border);border-radius:10px;box-shadow:0 5-5px 15px rgba(0,0,0,.4)}
     .leaflet-popup-tip{background:#1a1a1a}
     .leaflet-control-zoom a{background:#1a1a1a;color:var(--text);border:1px solid var(--border);border-radius:8px;transition:background .2s ease,color .2s ease}
     .leaflet-control-zoom a:hover{background:var(--brand);color:#fff}
@@ -221,7 +223,7 @@
       </div>
       <div class="card reveal">
         <h3>Amenities</h3>
-        <ul id="amenitiesList" class="amenities-list"></ul>
+        <ul id="amenitiesList" class="highlights-list"></ul>
       </div>
       <div class="card reveal">
         <h3>Map</h3>
@@ -308,6 +310,7 @@
     </div>
   </footer>
   <script>
+    // Reveal on scroll
     const onScrollReveal = () => {
       document.querySelectorAll('.reveal').forEach(el => {
         const r = el.getBoundingClientRect();
@@ -316,6 +319,7 @@
     };
     window.addEventListener('scroll', onScrollReveal);
     window.addEventListener('load', onScrollReveal);
+    // Modals
     const openModal = (modalId, content) => {
       const modal = document.getElementById(modalId);
       const modalContentDiv = modal.querySelector('.modal-text-content');
@@ -336,6 +340,7 @@
     window.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(m => closeModal(m.id));
     });
+    // Lightbox
     let lbIndex = 0, lbImages = [];
     const mainGalleryImg = document.getElementById('mainGalleryImg');
     function updateMainImage(i){
@@ -355,11 +360,13 @@
     document.getElementById('lightboxClose').onclick=closeLightbox;
     document.getElementById('lightboxPrev').onclick=()=>{lbIndex=(lbIndex-1+lbImages.length)%lbImages.length;updateLightbox();}
     document.getElementById('lightboxNext').onclick=()=>{lbIndex=(lbIndex+1)%lbImages.length;updateLightbox();}
+    // Haversine (miles)
     function haversine(lat1,lon1,lat2,lon2){
       const R=3958.8, φ1=lat1*Math.PI/180, φ2=lat2*Math.PI/180, dφ=(lat2-lat1)*Math.PI/180, dλ=(lon2-lon1)*Math.PI/180;
       const a=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
       return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
     }
+    // OSM Overpass for nearby
     function searchAndDisplayAmenities(p,listId,queryTypes,title){
       const list=document.getElementById(listId);
       list.innerHTML='<li class="nearby-item"><small>Searching for nearby '+title.toLowerCase()+'...</small></li>';
@@ -399,6 +406,7 @@
       searchAndDisplayAmenities(p,'nearbyList','restaurant|hospital|cafe|bar|park|supermarket|pharmacy|bank|fitness_centre','amenities');
       searchAndDisplayAmenities(p,'schoolsList','school','schools');
     }
+    // ---------- helpers ----------
     function asText(v){
       if(v==null) return "";
       if(typeof v==="string") return v;
@@ -414,6 +422,7 @@
       }
       return String(v);
     }
+    // CHANGED: make splitting robust to bullets & dashes from Airtable
     function splitMulti(str){
       return (str||"")
         .replace(/•/g,"\n")
@@ -431,6 +440,7 @@
       const base = String(email).split("@")[0].replace(/[._-]+/g," ");
       return base.replace(/\b\w/g, c => c.toUpperCase());
     }
+    // Normalize share links to embeddable URLs
     function toEmbed(raw){
       const url=(raw||"").trim(); if(!url) return "";
       if(/matterport\.com/i.test(url) || /^[A-Za-z0-9]{8,}$/.test(url)){
@@ -440,7 +450,7 @@
         return id ? `https://my.matterport.com/show/?m=${id}&play=1&brand=0&mls=1&qs=1&embed=1` : url;
       }
       if(/youtu\.be|youtube\.com/i.test(url)){
-        const id=(url.match(/ytu\.be\/([A-Za-z0-9_-]+)/i)||[])[1]||(url.match(/[?&]v=([A-Za-z0-9_-]+)/i)||[])[1]||"";
+        const id=(url.match(/youtu\.be\/([A-Za-z0-9_-]+)/i)||[])[1]||(url.match(/[?&]v=([A-Za-z0-9_-]+)/i)||[])[1]||"";
         return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : url;
       }
       if(/vimeo\.com/i.test(url)){
@@ -450,14 +460,17 @@
       return url;
     }
     function populate(p){
+      // Hero
       const hero=document.getElementById('heroBg');
       const heroSrc=asText(p.HeroImageURL)||(asText(p.GalleryURLsCSV).split(',')[0]||'').trim();
       if(heroSrc) hero.style.backgroundImage=`url('${heroSrc}')`;
       document.getElementById('projectName').textContent=asText(p['Project Name'])||'New Development';
       document.getElementById('projectAddress').textContent=asText(p.Address)||'Address not available';
+      // Elite Signature badge (>$1M)
       const priceStr=asText(p['Listing Price']);
       const num=Number(String(priceStr).replace(/[^0-9.]/g,''));
       if(num>1000000) document.getElementById('eliteBadge').classList.remove('hidden'); else document.getElementById('eliteBadge').classList.add('hidden');
+      // At a glance
       const gl=document.getElementById('glanceList'); gl.innerHTML='';
       const completionDate=p['Estimated Completion']? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
       const formattedPrice=priceStr? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
@@ -473,9 +486,11 @@
         if(v && v!=='N/A'){const li=document.createElement('li');li.innerHTML=`<span>${k}</span><span>${v}</span>`;gl.appendChild(li);}
       });
       if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
+      // About home
       const aboutHomeFull=document.getElementById('aboutFull');
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
       aboutHomeFull.innerHTML=`<p>${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
+      // CHANGED: Highlights & Amenities separate cards
       const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
       const highlightsArr=splitMulti(asText(p['Highlights']));
       if(highlightsArr.length){
@@ -494,46 +509,38 @@
       }else{
         amenitiesList.innerHTML='<li><span>No amenities listed.</span></li>';
       }
+      // Gallery
       lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
       const galleryThumbsContainer=document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML='';
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
-      const builderNames=splitMulti(asText(p['Builder Owners']));
-      const builderPhotos=splitMulti(asText(p['Builder Photo']));
-      const builderTitles=splitMulti(asText(p['Builder Owner Titles']));
+      // Builder
+      const builderNames = splitMulti(asText(p['Builder Owners']));
+      const builderPhotos = splitMulti(asText(p['Builder Photo']));
+      const builderTitles = splitMulti(asText(p['Builder Owner Titles']));
+      const builderAbouts = splitMulti(asText(p['About Builder']));
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
-      const latriceBio = asText(p['About Latrice']) || 'Learn more about Latrice, a dedicated builder.';
-      const jtBio = asText(p['About JT']) || 'Learn more about JT, a dedicated builder.';
       if(!builderNames.length){builderCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Builder information not available.</p>';}
-      const builders = [
-        {
-          name: 'Latrice',
-          bio: latriceBio,
-          photo: builderPhotos.find(url => url.includes('Latrice')) || builderPhotos[0] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder',
-          title: builderTitles[0] || 'Builder'
-        },
-        {
-          name: 'JT',
-          bio: jtBio,
-          photo: builderPhotos.find(url => url.includes('JT')) || builderPhotos[1] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder',
-          title: builderTitles[1] || 'Builder'
-        }
-      ].filter(b => builderNames.includes(b.name));
-      builders.forEach(builder => {
+      builderNames.forEach((name,i)=>{
+        const title=builderTitles[i]||'Builder';
+        const aboutText=builderAbouts[i] || `Learn more about ${name}, a dedicated builder specializing in ${title}.`;
+        const photoUrl=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         builderCardsContainer.innerHTML+=`
           <div class="card reveal builder-card">
             <div class="agent-top">
-              <img src="${builder.photo}" class="agent-avatar" alt="${builder.name}">
+              <img src="${photoUrl}" class="agent-avatar" alt="${name}">
               <div class="agent-meta">
-                <div class="agent-name">${builder.name}</div>
-                <div class="agent-tag">${builder.title}</div>
+                <div class="agent-name">${name}</div>
+                <div class="agent-tag">${title}</div>
               </div>
             </div>
-            <p class="about-line">${builder.bio}</p>
-            <button class="btn" onclick="openModal('builderModal', \`<p>${builder.bio.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+            <p class="about-line">${aboutText}</p>
+            <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>
           </div>`;
       });
+      // CHANGED: Agents — pull full names and show FULL bios (no truncation, no guesses)
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
+      // Prefer explicit name fields; fallback to Listing Agent fields only if they are actual names (not recIDs)
       let agentNames = splitMulti(asText(
         p['Agent Full Name'] || p['Agent Names'] || p['Agent Name'] ||
         p['Listing Agent Names'] || p['Listing Agents'] || p['Listing Agent 2'] || p['Listing Agent']
@@ -542,6 +549,7 @@
       const agentEmails=splitMulti(asText(p['Agent Email']));
       const agentPhones=splitMulti(asText(p['Agent Phone Number']));
       const agentTitles=splitMulti(asText(p['Agent Title']));
+      // Bios can be single long text or array; normalize to array aligned with names when possible
       let agentBiosRaw = asText(p['About Agent'] || p['Agent Bio'] || p['Agent Bios']);
       let agentBios = splitMulti(agentBiosRaw);
       if(!agentBios.length && agentBiosRaw) agentBios = [agentBiosRaw];
@@ -556,6 +564,7 @@
           const email=agentEmails[i]||'';
           const title=agentTitles[i]||'Real Estate Agent';
           const photoUrl=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+          // Use full bio; if missing, don't invent
           const bioFull = agentBios[i] ? agentBios[i] : (agentBios.length === 1 ? agentBios[0] : '');
           agentCardsContainer.innerHTML+=`
             <div class="card reveal agent-card">
@@ -576,6 +585,7 @@
             </div>`;
         });
       }
+      // Media embeds — two Matterports side-by-side, video below
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
       const pre = toEmbed(asText(p['Pre Dry Wall Matterport']));
       const fin = toEmbed(asText(p['Final Matterport']));
@@ -610,8 +620,10 @@
           </div>`;
       }
       mediaEmbedsContainer.innerHTML = html || `<div class="card reveal"><p style="text-align:center;color:var(--muted);">No media embeds available for this property.</p></div>`;
+      // Map
       initMapLeaflet(p);
     }
+    // Netlify function
     async function fetchProject(slug){
       const res=await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
       if(!res.ok) throw new Error(`API error ${res.status}`);
@@ -619,6 +631,7 @@
       if(!data||!data.project) throw new Error('Project not found');
       return data.project;
     }
+    // Boot
     window.addEventListener('DOMContentLoaded', async ()=>{
       try{
         const params=new URLSearchParams(location.search);
