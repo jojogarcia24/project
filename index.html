@@ -1,3 +1,6 @@
+you got it! here’s the **fully refreshed `index.html`** with the “Read More” buttons fixed (no weird characters). I added the `escHTML()` helper and swapped the three buttons to use it.
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -167,7 +170,7 @@
     .legal-updated{text-align:center;margin-top:30px;font-size:.85em;color:var(--muted);border-top:1px dashed var(--border);padding-top:20px}
     .legal-links{text-align:center;margin-top:15px;font-size:.9em;color:#muted}
     .legal-links a{color:var(--brand);text-decoration:underline;margin:0 5px;transition:color .2s ease}
-    .legal-links a:hover{color:var(--accent)}
+    .legal-links a:hover{color:#00e6b8}
 
     .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s ease-out,transform .7s ease-out}
     .reveal.visible{opacity:1;transform:translateY(0)}
@@ -568,6 +571,15 @@
     }
 
     /* ===== NEW HELPERS ===== */
+    function escHTML(s){
+      return String(s || '')
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;')
+        .replace(/'/g,'&#39;');
+    }
+
     // prefer short items first for initial view; clamp handled by CSS
     function renderListWithToggle(listEl, items, max=6, label="items"){
       const sorted = (items||[]).slice().sort((a,b)=>a.length-b.length);
@@ -699,10 +711,15 @@
       });
       if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn" onclick="track('siteplan_view')">View Plan</a>`;gl.appendChild(li);}
 
-      // About home
+      // About home (preview + modal w/ safe HTML)
       const aboutHomeFull=document.getElementById('aboutFull');
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
-      aboutHomeFull.innerHTML=`<p class="about-line">${firstSentence(aboutTextHome, 240)}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
+      aboutHomeFull.innerHTML =
+        `<p class="about-line">${firstSentence(aboutTextHome, 240)}</p>
+         <button class="btn"
+           onclick="openModal('aboutModal','<p>${escHTML(aboutTextHome)}</p>')">
+           Read More
+         </button>`;
 
       // Highlights & Amenities (with toggle)
       const highlightsArr = splitMulti(asText(getField(p, ['Highlights','Project Highlights','Property Highlights','features','project_highlights'])));
@@ -740,7 +757,11 @@
         const img = photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         const titleHTML = title ? `<div class="agent-tag">${title}</div>` : '';
         const preview = firstSentence(about, 180);
-        const modalHTML = about ? `<button class="btn" onclick="openModal('builderModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`); track('builder_readmore',{name:'${name}'})">Read More</button>` : '';
+        const safeName = (name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
+        const modalHTML = about ? `<button class="btn"
+  onclick="openModal('builderModal','<p>${escHTML(about)}</p>'); track('builder_readmore',{name:'${safeName}'})">
+  Read More
+</button>` : '';
         return `
           <div class="card reveal builder-card">
             <div class="agent-top">
@@ -787,9 +808,9 @@
       ctaBody.innerHTML = `
         <p>We’d love to show you this property. Pick an option below:</p>
         <div class="agent-actions">
-          ${josephTel?`<a href="tel:${josephTel}" class="icon-btn" onclick="track('cta_call',{name:'${joseph.name||'Agent'}'})">📞&nbsp;Call</a>`:''}
-          ${josephTel?`<a href="sms:${josephTel}" class="icon-btn" onclick="track('cta_text',{name:'${joseph.name||'Agent'}'})">💬&nbsp;Text</a>`:''}
-          ${joseph.email?`<a href="mailto:${joseph.email}" class="icon-btn" onclick="track('cta_email',{name:'${joseph.name||'Agent'}'})">✉️&nbsp;Email</a>`:''}
+          ${josephTel?`<a href="tel:${josephTel}" class="icon-btn" onclick="track('cta_call',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">📞&nbsp;Call</a>`:''}
+          ${josephTel?`<a href="sms:${josephTel}" class="icon-btn" onclick="track('cta_text',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">💬&nbsp;Text</a>`:''}
+          ${joseph.email?`<a href="mailto:${joseph.email}" class="icon-btn" onclick="track('cta_email',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">✉️&nbsp;Email</a>`:''}
         </div>
         <div style="margin-top:16px">
           <strong>Share or save this listing</strong>
@@ -801,6 +822,7 @@
         const tel = (a.phone||'').replace(/[^0-9+]/g,'');
         const img = a.photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
         const preview = firstSentence(a.bio);
+        const safeAgentName = (a.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
         agentCards.innerHTML += `
           <div class="card reveal agent-card">
             <div class="agent-top">
@@ -811,11 +833,14 @@
               </div>
             </div>
             ${preview ? `<p class="about-line">${preview}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
-            ${a.bio ? `<button class="btn" onclick="openModal('agentModal', \`<p>${a.bio.replace(/'/g,"\\'")}</p>\`); track('agent_readmore',{name:'${a.name}'})">Read More</button>` : ''}
+            ${a.bio ? `<button class="btn"
+              onclick="openModal('agentModal','<p>${escHTML(a.bio)}</p>'); track('agent_readmore',{name:'${safeAgentName}'})">
+              Read More
+            </button>` : ''}
             <div class="agent-actions">
-              ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${a.name}" onclick="track('agent_call',{name:'${a.name}'})">📞&nbsp;Call</a>`:''}
-              ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${a.name}" onclick="track('agent_text',{name:'${a.name}'})">💬&nbsp;Text</a>`:''}
-              ${a.email?`<a href="mailto:${a.email}" class="icon-btn" title="Email ${a.name}" onclick="track('agent_email',{name:'${a.name}'})">✉️&nbsp;Email</a>`:''}
+              ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${a.name}" onclick="track('agent_call',{name:'${(a.name||'').replace(/'/g,"\\'")}'})">📞&nbsp;Call</a>`:''}
+              ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${a.name}" onclick="track('agent_text',{name:'${(a.name||'').replace(/'/g,"\\'")}'})">💬&nbsp;Text</a>`:''}
+              ${a.email?`<a href="mailto:${a.email}" class="icon-btn" title="Email ${a.name}" onclick="track('agent_email',{name:'${(a.name||'').replace(/'/g,"\\'")}'})">✉️&nbsp;Email</a>`:''}
             </div>
           </div>`;
       });
@@ -919,3 +944,4 @@
   </script>
 </body>
 </html>
+```
