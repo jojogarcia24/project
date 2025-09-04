@@ -244,7 +244,6 @@
         <div id="agentCards" class="card-container"></div>
       </div>
 
-      <!-- Separate cards -->
       <div class="card reveal">
         <h3>Highlights</h3>
         <ul id="highlightsList" class="highlights-list"></ul>
@@ -454,14 +453,6 @@
     }
 
     // ---------- helpers ----------
-    const getFirstFilled = (obj, keys) => {
-      for (const k of keys) {
-        const v = obj && obj[k];
-        if (v != null && String(v).trim() !== "") return v;
-      }
-      return "";
-    };
-
     function asText(v){
       if(v==null) return "";
       if(typeof v==="string") return v;
@@ -478,12 +469,26 @@
       return String(v);
     }
 
-    // Robust splitter for bullets / pipes / semicolons / commas / line breaks / colons
+    // Case-insensitive, alias-aware getter
+    function getField(p, keys){
+      // exact match first
+      for(const k of keys){ if(p && p[k]!=null && String(p[k]).trim()!=="") return p[k]; }
+      // then case-insensitive
+      const lowerIndex = {};
+      Object.keys(p||{}).forEach(k=> lowerIndex[k.toLowerCase()] = k);
+      for(const k of keys){
+        const m = lowerIndex[k.toLowerCase()];
+        if(m && p[m]!=null && String(p[m]).trim()!=="") return p[m];
+      }
+      return "";
+    }
+
+    // Robust splitter for bullets / pipes / semicolons / commas / line breaks
     function splitMulti(str){
       return (str||"")
         .replace(/\u2022|•/g,"\n")
         .replace(/\r/g,"\n")
-        .split(/[\n;,|]+|:\s(?=[A-Z0-9])/g)   // also split after "Label: Value"
+        .split(/[\n;,|]+/g)
         .map(s=>s.trim())
         .filter(Boolean);
     }
@@ -550,9 +555,14 @@
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
       aboutHomeFull.innerHTML=`<p>${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // ===== Highlights & Amenities (robust field + parsing) =====
-      const highlightsRaw = asText(getFirstFilled(p, ['Highlights','Project Highlights']));
-      const amenitiesRaw  = asText(getFirstFilled(p, ['Amenities','Project Amenities']));
+      // ===== Highlights & Amenities (case-insensitive, alias aware) =====
+      const highlightsRaw = asText(getField(p, [
+        'Highlights','Project Highlights','Property Highlights','features','project_highlights'
+      ]));
+      const amenitiesRaw  = asText(getField(p, [
+        'Amenities','Project Amenities','Property Amenities','amenities','project_amenities'
+      ]));
+
       const highlightsArr = splitMulti(highlightsRaw);
       const amenitiesArr  = splitMulti(amenitiesRaw);
 
@@ -582,28 +592,39 @@
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
-      // ===== Builder: strict Airtable-only mapping (no text fallbacks) =====
+      // ===== Builder: strict to Airtable values, but resilient to key names =====
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
 
-      const nameLatrice = asText(p['Builder Latrice']).trim();
-      const nameJT      = asText(p['Builder JT']).trim();
+      // Names (prefer explicit fields; fallback to split "Builder Owners")
+      const nameLatrice = asText(
+        getField(p, ['Builder Latrice','Builder 1','Builder Name 1','Builder Owner 1'])
+      ).trim() || (asText(getField(p,['Builder Owners'])).split(',')[0]||'').trim();
 
-      const titlesArr   = splitMulti(asText(p['Builder Owner Titles']));
-      const titleLatrice = (titlesArr[0] || '').trim();
-      const titleJT      = (titlesArr[1] || '').trim();
+      const nameJT = asText(
+        getField(p, ['Builder JT','Builder 2','Builder Name 2','Builder Owner 2'])
+      ).trim() || (asText(getField(p,['Builder Owners'])).split(',')[1]||'').trim();
 
-      const aboutLatrice = asText(p['About Latrice']).trim();
-      const aboutJT      = asText(p['About JT']).trim();
+      // Titles (first = Latrice, second = JT)
+      const titlesArr = splitMulti(asText(getField(p, ['Builder Owner Titles','Builder Titles'])));
+      const titleLatrice = (titlesArr[0]||'').trim();
+      const titleJT      = (titlesArr[1]||'').trim();
 
-      const photoLinks = asText(p['Builder Photo']).split(',').map(s=>s.trim()).filter(Boolean);
+      // Bios
+      const aboutLatrice = asText(getField(p, ['About Latrice'])).trim()
+                        || (splitMulti(asText(getField(p,['Builder About'])))[0]||'').trim();
+      const aboutJT      = asText(getField(p, ['About JT'])).trim()
+                        || (splitMulti(asText(getField(p,['Builder About'])))[1]||'').trim();
+
+      // Photos (match by name in URL when possible)
+      const photoLinks = asText(getField(p,['Builder Photo','Builder Photos'])).split(',').map(s=>s.trim()).filter(Boolean);
       const photoLatrice = (photoLinks.find(u=>/latrice/i.test(u)) || photoLinks[0] || '').trim();
       const photoJT      = (photoLinks.find(u=>/\bjt\b/i.test(u))   || photoLinks[1] || '').trim();
 
       function builderCardHTML(name, title, about, photo){
-        if(!name && !about) return ''; // hide if we have no real content
+        if(!name && !about) return ''; // hide empty cards
         const img = photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         const titleHTML = title ? `<div class="agent-tag">${title}</div>` : '';
-        const aboutPreview = about ? about : '';
+        const aboutPreview = about ? `<p class="about-line">${about}</p>` : '';
         const modalHTML = about ? `<button class="btn" onclick="openModal('builderModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`)">Read More</button>` : '';
         return `
           <div class="card reveal builder-card">
@@ -614,7 +635,7 @@
                 ${titleHTML}
               </div>
             </div>
-            ${aboutPreview ? `<p class="about-line">${aboutPreview}</p>` : ''}
+            ${aboutPreview}
             ${modalHTML}
           </div>`;
       }
@@ -624,14 +645,14 @@
         builderCardHTML(nameJT,      titleJT,      aboutJT,      photoJT);
       // ===== END Builder =====
 
-      // Agents (unchanged from your last version): Joseph first, Cliff second.
+      // Agents (Joseph first, Cliff second) — unchanged logic
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
       const A = {
-        photos:  splitMulti(asText(p['Agent Photo'])),
-        emails:  splitMulti(asText(p['Agent Email'])),
-        phones:  splitMulti(asText(p['Agent Phone Number'])),
-        titles:  splitMulti(asText(p['Agent Title'])),
-        bios:    splitMulti(asText(p['About Agent']))
+        photos:  splitMulti(asText(getField(p,['Agent Photo']))),
+        emails:  splitMulti(asText(getField(p,['Agent Email']))),
+        phones:  splitMulti(asText(getField(p,['Agent Phone Number']))),
+        titles:  splitMulti(asText(getField(p,['Agent Title']))),
+        bios:    splitMulti(asText(getField(p,['About Agent'])))
       };
       const agents = [
         { name: 'Joseph Garcia', idx: 0 },
