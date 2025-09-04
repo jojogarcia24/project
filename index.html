@@ -7,7 +7,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <!-- Luxe display font for hero title -->
+  <!-- Added luxe serif for hero title -->
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@600;700;800&display=swap" rel="stylesheet">
 
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
@@ -37,8 +37,8 @@
     .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.65);animation:zoompan 35s infinite alternate ease-in-out;transform-origin:center center;width:100%;height:100%}
     .hero-overlay{position:absolute;inset:0;background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%),radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
     .hero-content{position:relative;z-index:5;text-shadow:0 4px 12px var(--shadow-dark);width:100%;max-width:100%}
-    /* LUXE FONT update only */
-    .title-xl{font-size:clamp(32px,6vw,56px);font-family:'Cinzel','Times New Roman',serif;margin:0 0 8px;line-height:1.1;color:#fff}
+    /* CHANGED: Luxe font for hero title */
+    .title-xl{font-size:clamp(32px,6vw,56px);font-family:'Cinzel', 'Times New Roman', serif;margin:0 0 8px;line-height:1.1;color:#fff}
     .subtitle{color:var(--muted);margin:0;font-size:1.1em}
     .elite-badge{display:inline-block;position:absolute;top:28px;right:28px;padding:8px 14px;border:1px solid var(--border);border-radius:999px;background:rgba(0,0,0,.95);box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent);color:#fff;font-weight:600;animation:pulseGlow 2s infinite alternate ease-in-out;letter-spacing:.5px}
     .hidden{display:none}
@@ -54,8 +54,8 @@
       width:100%;
       box-sizing:border-box;
     }
-    .layout > *{min-width:0}
-    .content{min-width:0}
+    .layout > *{ min-width:0; }
+    .content{ min-width:0; }
 
     @media (max-width:980px){
       .layout{grid-template-columns:1fr;padding:18px}
@@ -179,7 +179,7 @@
     .legal-updated{text-align:center;margin-top:30px;font-size:.85em;color:var(--muted);border-top:1px dashed var(--border);padding-top:20px}
     .legal-links{text-align:center;margin-top:15px;font-size:.9em;color:#muted}
     .legal-links a{color:var(--brand);text-decoration:underline;margin:0 5px;transition:color .2s ease}
-    .legal-links a:hover{color:#00e6b8}
+    .legal-links a:hover{color:var(--accent)}
 
     .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s ease-out,transform .7s ease-out}
     .reveal.visible{opacity:1;transform:translateY(0)}
@@ -449,36 +449,29 @@
     }
 
     // ---------- helpers ----------
-    function normToText(x){
-      if(x==null) return "";
-      if(typeof x==="string") return x;
-      if(typeof x==="number") return String(x);
-      if(Array.isArray(x)){
-        return x.map(normToText).join(", ");
+    function asText(v){
+      if(v==null) return "";
+      if(typeof v==="string") return v;
+      if(Array.isArray(v)){
+        return v.map(x=> typeof x==="string" ? x :
+          (x&&typeof x==="object"&&"text" in x) ? String(x.text) :
+          (x&&x.url)? x.url : String(x)
+        ).join(", ");
       }
-      if(typeof x==="object"){
-        if("text" in x) return String(x.text);
-        if("name" in x) return String(x.name);
-        try{return JSON.stringify(x);}catch(e){return String(x);}
+      if(typeof v==="object"){
+        if("text" in v) return String(v.text);
+        try{return JSON.stringify(v);}catch(e){return String(v);}
       }
-      return String(x);
+      return String(v);
     }
 
-    // Keep arrays as arrays when Airtable returns lookups
-    function normToArray(x){
-      if(x==null) return [];
-      if(Array.isArray(x)) return x.map(normToText);
-      const s = normToText(x).trim();
-      if(!s) return [];
-      return [s];
-    }
-
-    // Split bullets/lines/semicolons/pipes (NOT commas to avoid chopping sentences)
+    // CHANGED: make splitting robust to bullets & dashes from Airtable
     function splitMulti(str){
       return (str||"")
+        .replace(/•/g,"\n")
         .replace(/\r/g,"\n")
-        .replace(/[•\u2022]/g,"\n")
-        .split(/[\n;|]+/g)
+        .replace(/\u2022/g,"\n")
+        .split(/[\n,;|]+/g)
         .map(s=>s.trim())
         .filter(Boolean);
     }
@@ -486,17 +479,15 @@
     function isRecordId(token){
       return /^rec[a-zA-Z0-9]{14,}$/i.test(token);
     }
-
-    // Get first non-empty of possible field names
-    function getField(obj, ...names){
-      for(const n of names){
-        if(obj && obj[n]!=null && String(obj[n]).trim()!=="") return obj[n];
-      }
-      return "";
+    function nameFromEmail(email){
+      if(!email) return "";
+      const base = String(email).split("@")[0].replace(/[._-]+/g," ");
+      return base.replace(/\b\w/g, c => c.toUpperCase());
     }
 
+    // Normalize share links to embeddable URLs
     function toEmbed(raw){
-      const url=(normToText(raw)||"").trim(); if(!url) return "";
+      const url=(raw||"").trim(); if(!url) return "";
       if(/matterport\.com/i.test(url) || /^[A-Za-z0-9]{8,}$/.test(url)){
         const m=url.match(/[?&]m=([A-Za-z0-9]+)|\/show\/\?m=([A-Za-z0-9]+)/i);
         const idOnly=url.match(/^[A-Za-z0-9]{8,}$/);
@@ -517,45 +508,43 @@
     function populate(p){
       // Hero
       const hero=document.getElementById('heroBg');
-      const heroSrc=normToText(p.HeroImageURL)||(normToText(p.GalleryURLsCSV).split(',')[0]||'').trim();
+      const heroSrc=asText(p.HeroImageURL)||(asText(p.GalleryURLsCSV).split(',')[0]||'').trim();
       if(heroSrc) hero.style.backgroundImage=`url('${heroSrc}')`;
-      document.getElementById('projectName').textContent=normToText(p['Project Name'])||'New Development';
-      document.getElementById('projectAddress').textContent=normToText(p.Address)||'Address not available';
+      document.getElementById('projectName').textContent=asText(p['Project Name'])||'New Development';
+      document.getElementById('projectAddress').textContent=asText(p.Address)||'Address not available';
 
       // Elite Signature badge (>$1M)
-      const priceStr=normToText(p['Listing Price']);
+      const priceStr=asText(p['Listing Price']);
       const num=Number(String(priceStr).replace(/[^0-9.]/g,''));
       if(num>1000000) document.getElementById('eliteBadge').classList.remove('hidden'); else document.getElementById('eliteBadge').classList.add('hidden');
 
       // At a glance
       const gl=document.getElementById('glanceList'); gl.innerHTML='';
-      const completionDate=p['Estimated Completion']? new Date(normToText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
+      const completionDate=p['Estimated Completion']? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
       const formattedPrice=priceStr? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
       const glanceData={
-        'Status':normToText(p.Status)||'N/A',
+        'Status':asText(p.Status)||'N/A',
         'Price':formattedPrice,
-        'Beds':normToText(p.Beds)||'N/A',
-        'Baths':normToText(p.Baths)||'N/A',
-        'Sq Footage':(normToText(p['Sq Footage'])?`${normToText(p['Sq Footage'])} sq ft`:'N/A'),
+        'Beds':asText(p.Beds)||'N/A',
+        'Baths':asText(p.Baths)||'N/A',
+        'Sq Footage':(asText(p['Sq Footage'])?`${asText(p['Sq Footage'])} sq ft`:'N/A'),
         'Estimated Completion':completionDate
       };
       Object.entries(glanceData).forEach(([k,v])=>{
         if(v && v!=='N/A'){const li=document.createElement('li');li.innerHTML=`<span>${k}</span><span>${v}</span>`;gl.appendChild(li);}
       });
-      if(normToText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${normToText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
+      if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
 
       // About home
       const aboutHomeFull=document.getElementById('aboutFull');
-      const aboutTextHome=normToText(getField(p,'Description','Property Description'))||'No description available for this property.';
+      const aboutTextHome=asText(p.Description)||'No description available for this property.';
       aboutHomeFull.innerHTML=`<p>${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Highlights & Amenities (robust parsing; no comma splitting)
+      // CHANGED: Highlights & Amenities robust parsing
       const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const highlightsRaw = getField(p,'Highlights');
-      const amenitiesRaw = getField(p,'Amenities');
-      const highlightItems = splitMulti(normToText(highlightsRaw));
-      const amenityItems  = splitMulti(normToText(amenitiesRaw));
-      const combo=[...highlightItems,...amenityItems].filter(Boolean);
+      const highlightsArr=splitMulti(asText(p['Highlights']));
+      const amenitiesArr=splitMulti(asText(p['Amenities']));
+      const combo=[...highlightsArr,...amenitiesArr].filter(Boolean);
       if(combo.length){
         combo.forEach(item=>{
           const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; highlightsList.appendChild(li);
@@ -565,20 +554,20 @@
       }
 
       // Gallery
-      lbImages=normToText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
+      lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
       const galleryThumbsContainer=document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML='';
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
-      // Builder (unchanged)
-      const builderNames=splitMulti(normToText(p['Builder Owners']));
-      const builderPhotos=splitMulti(normToText(p['Builder Photo']));
-      const builderTitles=splitMulti(normToText(p['Builder Owner Titles']));
+      // Builder
+      const builderNames=splitMulti(asText(p['Builder Owners']));
+      const builderPhotos=splitMulti(asText(p['Builder Photo']));
+      const builderTitles=splitMulti(asText(p['Builder Owner Titles']));
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
       if(!builderNames.length){builderCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Builder information not available.</p>';}
       builderNames.forEach((name,i)=>{
         const title=builderTitles[i]||'Builder';
-        const aboutText=normToText(p['Builder About']) || `Learn more about ${name}, a dedicated builder specializing in ${title}.`;
+        const aboutText=asText(p['Builder About']) || `Learn more about ${name}, a dedicated builder specializing in ${title}.`;
         const photoUrl=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         builderCardsContainer.innerHTML+=`
           <div class="card reveal builder-card">
@@ -594,30 +583,37 @@
           </div>`;
       });
 
-      // LISTING AGENTS — exact, full names from "Listing Agent 2"; full bios matched by index from "About Agent"
+      // CHANGED: Agents — pull full names and show FULL bios (no truncation, no guesses)
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
+      // Prefer explicit name fields; fallback to Listing Agent fields only if they are actual names (not recIDs)
+      let agentNames = splitMulti(asText(
+        p['Agent Full Name'] || p['Agent Names'] || p['Agent Name'] ||
+        p['Listing Agent Names'] || p['Listing Agents'] || p['Listing Agent 2'] || p['Listing Agent']
+      )).filter(t => t && !isRecordId(t) && /[A-Za-z]/.test(t));
 
-      // 1) Names: authoritative source
-      const agentNames = splitMulti(normToText(getField(p,'Listing Agent 2')))
-        .filter(t => t && !isRecordId(t));
+      const agentPhotos=splitMulti(asText(p['Agent Photo']));
+      const agentEmails=splitMulti(asText(p['Agent Email']));
+      const agentPhones=splitMulti(asText(p['Agent Phone Number']));
+      const agentTitles=splitMulti(asText(p['Agent Title']));
+      // Bios can be single long text or array; normalize to array aligned with names when possible
+      let agentBiosRaw = asText(p['About Agent'] || p['Agent Bio'] || p['Agent Bios']);
+      let agentBios = splitMulti(agentBiosRaw);
+      if(!agentBios.length && agentBiosRaw) agentBios = [agentBiosRaw];
 
-      // 2) Bios/photos/emails/phones as arrays (Airtable lookups map by index)
-      const biosArr    = normToArray(getField(p,'About Agent','Agent Bios'));
-      const photosArr  = normToArray(getField(p,'Agent Photo'));
-      const emailsArr  = normToArray(getField(p,'Agent Email'));
-      const phonesArr  = normToArray(getField(p,'Agent Phone Number'));
-      const titlesArr  = normToArray(getField(p,'Agent Title'));
+      if(!agentNames.length && agentEmails.length){
+        agentNames = agentEmails.map(nameFromEmail);
+      }
 
       if(!agentNames.length){
         agentCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>';
       } else {
         agentNames.forEach((name,i)=>{
-          const bioFull = biosArr[i] ? normToText(biosArr[i]) : '';
-          const photoUrl = photosArr[i] ? normToText(photosArr[i]) : 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-          const email = emailsArr[i] ? normToText(emailsArr[i]) : '';
-          const telRaw = phonesArr[i] ? normToText(phonesArr[i]) : '';
-          const tel = telRaw.replace(/[^0-9+]/g,'');
-          const title = titlesArr[i] ? normToText(titlesArr[i]) : 'Real Estate Agent';
+          const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,'');
+          const email=agentEmails[i]||'';
+          const title=agentTitles[i]||'Real Estate Agent';
+          const photoUrl=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+          // Use full bio; if missing, don't invent
+          const bioFull = agentBios[i] ? agentBios[i] : (agentBios.length === 1 ? agentBios[0] : '');
 
           agentCardsContainer.innerHTML+=`
             <div class="card reveal agent-card">
@@ -639,11 +635,11 @@
         });
       }
 
-      // Media embeds
+      // Media embeds — two Matterports side-by-side, video below
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
-      const pre = toEmbed(normToText(p['Pre Dry Wall Matterport']));
-      const fin = toEmbed(normToText(p['Final Matterport']));
-      const vid = toEmbed(normToText(p['Marketing Video']));
+      const pre = toEmbed(asText(p['Pre Dry Wall Matterport']));
+      const fin = toEmbed(asText(p['Final Matterport']));
+      const vid = toEmbed(asText(p['Marketing Video']));
       let html=''; const mp=[];
       if(pre){
         mp.push(`
