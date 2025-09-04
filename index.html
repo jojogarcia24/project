@@ -578,7 +578,7 @@
       const builderPhotosAll = splitMulti(asText(p['Builder Photo']));
       const builderTitlesAll = splitMulti(asText(p['Builder Owner Titles']));
       const aboutLatrice = asText(p['About Latrice']) || 'Learn more about Latrice, a dedicated builder.';
-      const aboutJT = asText(p['About JT']) || 'Learn more about JT, a dedicated builder.';
+      const aboutJT = splitMulti(asText((p['About JT']));
 
       // Latrice - first photo and title
       const latricePhoto = builderPhotosAll.find(photo => photo.toLowerCase().includes('latrice')) || builderPhotosAll[0] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
