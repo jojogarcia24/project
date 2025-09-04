@@ -245,6 +245,7 @@
         <div id="agentCards" class="card-container"></div>
       </div>
 
+      <!-- SPLIT: Highlights and Amenities into two separate cards -->
       <div class="card reveal">
         <h3>Highlights</h3>
         <ul id="highlightsList" class="highlights-list"></ul>
@@ -254,6 +255,7 @@
         <h3>Amenities</h3>
         <ul id="amenitiesList" class="highlights-list"></ul>
       </div>
+      <!-- END SPLIT -->
 
       <div class="card reveal">
         <h3>Map</h3>
@@ -545,9 +547,12 @@
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
       aboutHomeFull.innerHTML=`<p>${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Highlights (separate from Amenities)
+      // ====== (2) SPLIT: Highlights & Amenities (each pulls from its own field) ======
       const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
+      const amenitiesList=document.getElementById('amenitiesList'); amenitiesList.innerHTML='';
       const highlightsArr=splitMulti(asText(p['Highlights']));
+      const amenitiesArr=splitMulti(asText(p['Amenities']));
+
       if(highlightsArr.length){
         highlightsArr.forEach(item=>{
           const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; highlightsList.appendChild(li);
@@ -556,9 +561,6 @@
         highlightsList.innerHTML='<li><span>No highlights listed.</span></li>';
       }
 
-      // Amenities (separate from Highlights)
-      const amenitiesList=document.getElementById('amenitiesList'); amenitiesList.innerHTML='';
-      const amenitiesArr=splitMulti(asText(p['Amenities']));
       if(amenitiesArr.length){
         amenitiesArr.forEach(item=>{
           const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; amenitiesList.appendChild(li);
@@ -566,6 +568,7 @@
       }else{
         amenitiesList.innerHTML='<li><span>No amenities listed.</span></li>';
       }
+      // ====== END SPLIT ======
 
       // Gallery
       lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
@@ -573,102 +576,95 @@
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
-      // Builder - Latrice first, JT second
+      // ====== (1) BUILDER: explicit mapping for Latrice (first) and JT (second) ======
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
-      const builderPhotosAll = splitMulti(asText(p['Builder Photo']));
-      const builderTitlesAll = splitMulti(asText(p['Builder Owner Titles']));
-      const aboutLatrice = asText(p['About Latrice']) || 'Learn more about Latrice, a dedicated builder.';
-      const aboutJT = splitMulti(asText((p['About JT']));
 
-      // Latrice - first photo and title
-      const latricePhoto = builderPhotosAll.find(photo => photo.toLowerCase().includes('latrice')) || builderPhotosAll[0] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
-      const latriceTitle = builderTitlesAll[0] || 'Builder';
-      
-      // JT - second photo and title
-      const jtPhoto = builderPhotosAll.find(photo => !photo.toLowerCase().includes('latrice')) || builderPhotosAll[1] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
-      const jtTitle = builderTitlesAll[1] || 'Builder';
+      // Pull preferred names from dedicated fields when present
+      const nameLatrice = asText(p['Builder Latrice']) || 'Latrice';
+      const nameJT      = asText(p['Builder JT'])      || 'JT';
 
-      builderCardsContainer.innerHTML = `
+      // Titles: first before comma is Latrice, second after comma is JT
+      const titlesArr = splitMulti(asText(p['Builder Owner Titles']));
+      const titleLatrice = titlesArr[0] || 'Builder';
+      const titleJT      = titlesArr[1] || 'Builder';
+
+      // Bios: use About Latrice / About JT if present; else fall back to Builder About split (first/second)
+      const aboutLatrice = asText(p['About Latrice']) ||
+                           splitMulti(asText(p['Builder About']))[0] ||
+                           `Learn more about ${nameLatrice}.`;
+      const aboutJT      = asText(p['About JT']) ||
+                           splitMulti(asText(p['Builder About']))[1] ||
+                           `Learn more about ${nameJT}.`;
+
+      // Photos: find link containing 'Latrice' for Latrice; 'JT' for JT; else first/second by comma order
+      const photoLinks = asText(p['Builder Photo']).split(',').map(s=>s.trim()).filter(Boolean);
+      const photoLatrice = (photoLinks.find(u=>/latrice/i.test(u)) || photoLinks[0] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder');
+      const photoJT      = (photoLinks.find(u=>/\bjt\b/i.test(u))   || photoLinks[1] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder');
+
+      // Render cards (order: Latrice, then JT)
+      const builderCardHTML = (name, title, about, photo) => `
         <div class="card reveal builder-card">
           <div class="agent-top">
-            <img src="${latricePhoto}" class="agent-avatar" alt="Latrice">
+            <img src="${photo}" class="agent-avatar" alt="${name}">
             <div class="agent-meta">
-              <div class="agent-name">Latrice</div>
-              <div class="agent-tag">${latriceTitle}</div>
+              <div class="agent-name">${name}</div>
+              <div class="agent-tag">${title}</div>
             </div>
           </div>
-          <p class="about-line">${aboutLatrice}</p>
-          <button class="btn" onclick="openModal('builderModal', \`<p>${aboutLatrice.replace(/'/g,"\\'")}</p>\`)">Read More</button>
-        </div>
-        <div class="card reveal builder-card">
-          <div class="agent-top">
-            <img src="${jtPhoto}" class="agent-avatar" alt="JT">
-            <div class="agent-meta">
-              <div class="agent-name">JT</div>
-              <div class="agent-tag">${jtTitle}</div>
-            </div>
-          </div>
-          <p class="about-line">${aboutJT}</p>
-          <button class="btn" onclick="openModal('builderModal', \`<p>${aboutJT.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+          <p class="about-line">${about}</p>
+          <button class="btn" onclick="openModal('builderModal', \`<p>${about.replace(/'/g,"\\'")}</p>\`)">Read More</button>
         </div>`;
 
-      // Agents - Joseph Garcia first, Cliff Graham second
+      builderCardsContainer.innerHTML =
+        builderCardHTML(nameLatrice, titleLatrice, aboutLatrice, photoLatrice) +
+        builderCardHTML(nameJT, titleJT, aboutJT, photoJT);
+      // ====== END BUILDER ======
+
+      // ====== (3) LISTING AGENTS: split all comma-separated fields → Joseph (first), Cliff (second) ======
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
-      const agentPhotosAll=splitMulti(asText(p['Agent Photo']));
-      const agentEmailsAll=splitMulti(asText(p['Agent Email']));
-      const agentPhonesAll=splitMulti(asText(p['Agent Phone Number']));
-      const agentTitlesAll=splitMulti(asText(p['Agent Title']));
-      const agentBiosAll=splitMulti(asText(p['About Agent']));
 
-      // Joseph Garcia - first of everything
-      const josephPhoto = agentPhotosAll[0] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-      const josephEmail = agentEmailsAll[0] || '';
-      const josephPhone = agentPhonesAll[0] || '';
-      const josephTitle = agentTitlesAll[0] || 'Real Estate Agent';
-      const josephBio = agentBiosAll[0] || '';
-      const josephTel = josephPhone.replace(/[^0-9+]/g,'');
+      // Split helpers for agent fields
+      const A = {
+        photos:  splitMulti(asText(p['Agent Photo'])),
+        emails:  splitMulti(asText(p['Agent Email'])),
+        phones:  splitMulti(asText(p['Agent Phone Number'])),
+        titles:  splitMulti(asText(p['Agent Title'])),
+        bios:    splitMulti(asText(p['About Agent'])) // About Agent split: first part → Joseph, second → Cliff
+      };
 
-      // Cliff Graham - second of everything
-      const cliffPhoto = agentPhotosAll[1] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-      const cliffEmail = agentEmailsAll[1] || '';
-      const cliffPhoneRaw = agentPhonesAll[1] || '';
-      const cliffTitle = agentTitlesAll[1] || 'Real Estate Agent';
-      const cliffBio = agentBiosAll[1] || '';
-      const cliffTel = cliffPhoneRaw.replace(/[^0-9+]/g,'');
+      // Hard-assign names regardless of what the source fields say
+      const agents = [
+        { name: 'Joseph Garcia', idx: 0 },
+        { name: 'Cliff Graham',  idx: 1 }
+      ];
 
-      agentCardsContainer.innerHTML = `
-        <div class="card reveal agent-card">
-          <div class="agent-top">
-            <img src="${josephPhoto}" class="agent-avatar" alt="Joseph Garcia">
-            <div class="agent-meta">
-              <div class="agent-name">Joseph Garcia</div>
-              <div class="agent-tag">${josephTitle}</div>
+      agents.forEach(({name, idx})=>{
+        const telRaw = A.phones[idx] || '';
+        const tel = telRaw.replace(/[^0-9+]/g,'');
+        const email = A.emails[idx] || '';
+        const title = A.titles[idx] || 'Real Estate Agent';
+        const photo = A.photos[idx] || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
+        const bio   = A.bios[idx] || '';
+
+        agentCardsContainer.innerHTML += `
+          <div class="card reveal agent-card">
+            <div class="agent-top">
+              <img src="${photo}" class="agent-avatar" alt="${name}">
+              <div class="agent-meta">
+                <div class="agent-name">${name}</div>
+                <div class="agent-tag">${title}</div>
+              </div>
             </div>
-          </div>
-          ${josephBio ? `<p>${josephBio}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
-          ${josephBio ? `<button class="btn" onclick="openModal('agentModal', \`<p>${josephBio.replace(/'/g,"\\'")}</p>\`)">Read More</button>` : ''}
-          <div class="agent-actions">
-            ${josephTel?`<a href="tel:${josephTel}" class="icon-btn" title="Call Joseph Garcia">📞&nbsp;Call</a>`:''}
-            ${josephTel?`<a href="sms:${josephTel}" class="icon-btn" title="Text Joseph Garcia">💬&nbsp;Text</a>`:''}
-            ${josephEmail?`<a href="mailto:${josephEmail}" class="icon-btn" title="Email Joseph Garcia">✉️&nbsp;Email</a>`:''}
-          </div>
-        </div>
-        <div class="card reveal agent-card">
-          <div class="agent-top">
-            <img src="${cliffPhoto}" class="agent-avatar" alt="Cliff Graham">
-            <div class="agent-meta">
-              <div class="agent-name">Cliff Graham</div>
-              <div class="agent-tag">${cliffTitle}</div>
+            ${bio ? `<p>${bio}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
+            ${bio ? `<button class="btn" onclick="openModal('agentModal', \`<p>${bio.replace(/'/g,"\\'")}</p>\`)">Read More</button>` : ''}
+            <div class="agent-actions">
+              ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${name}">📞&nbsp;Call</a>`:''}
+              ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${name}">💬&nbsp;Text</a>`:''}
+              ${email?`<a href="mailto:${email}" class="icon-btn" title="Email ${name}">✉️&nbsp;Email</a>`:''}
             </div>
-          </div>
-          ${cliffBio ? `<p>${cliffBio}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
-          ${cliffBio ? `<button class="btn" onclick="openModal('agentModal', \`<p>${cliffBio.replace(/'/g,"\\'")}</p>\`)">Read More</button>` : ''}
-          <div class="agent-actions">
-            ${cliffTel?`<a href="tel:${cliffTel}" class="icon-btn" title="Call Cliff Graham">📞&nbsp;Call</a>`:''}
-            ${cliffTel?`<a href="sms:${cliffTel}" class="icon-btn" title="Text Cliff Graham">💬&nbsp;Text</a>`:''}
-            ${cliffEmail?`<a href="mailto:${cliffEmail}" class="icon-btn" title="Email Cliff Graham">✉️&nbsp;Email</a>`:''}
-          </div>
-        </div>`;
+          </div>`;
+      });
+      // ====== END AGENTS ======
 
       // Media embeds — two Matterports side-by-side, video below
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
