@@ -37,13 +37,12 @@
     .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.65);animation:zoompan 35s infinite alternate ease-in-out;transform-origin:center center;width:100%;height:100%}
     .hero-overlay{position:absolute;inset:0;background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%),radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
     .hero-content{position:relative;z-index:5;text-shadow:0 4px 12px var(--shadow-dark);width:100%;max-width:100%}
-    /* LUXE FONT update only */
+    /* LUXE FONT for hero title */
     .title-xl{font-size:clamp(32px,6vw,56px);font-family:'Cinzel','Times New Roman',serif;margin:0 0 8px;line-height:1.1;color:#fff}
     .subtitle{color:var(--muted);margin:0;font-size:1.1em}
     .elite-badge{display:inline-block;position:absolute;top:28px;right:28px;padding:8px 14px;border:1px solid var(--border);border-radius:999px;background:rgba(0,0,0,.95);box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent);color:#fff;font-weight:600;animation:pulseGlow 2s infinite alternate ease-in-out;letter-spacing:.5px}
     .hidden{display:none}
 
-    /* GRID */
     .layout{
       display:grid;
       grid-template-columns:minmax(0,350px) minmax(0,1fr);
@@ -96,8 +95,8 @@
     .card.reveal.visible::before{transform:translateX(100%)}
 
     .glance-list,.nearby-list,.highlights-list{list-style:none;padding:0;margin:0;width:100%}
-    .glance-list li,.highlights-list li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border);font-size:1.05em}
-    .glance-list li:last-child,.highlights-list li:last-child{border-bottom:none}
+    .glance-list li{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px dashed var(--border);font-size:1.05em}
+    .glance-list li:last-child{border-bottom:none}
     .nearby-item{padding:10px 0;border-bottom:1px dashed var(--border)}
     .nearby-item:last-child{border-bottom:none}
     .nearby-item strong{display:block;font-size:1.1em;color:var(--brand)}
@@ -169,17 +168,9 @@
     .legal-wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column}
     .legal-grid{display:grid;grid-template-columns:1fr;gap:30px;margin-top:25px}
     @media (min-width:900px){.legal-grid{grid-template-columns:1.5fr 1fr}}
-    .legal-section-title{font-weight:700;font-size:14px;margin-bottom:10px;color:var(--text);letter-spacing:.5px}
+    .legal-section-title{font-weight:700;font-size:14px;margin-bottom:10px;color:#fff;letter-spacing:.5px}
     .legal-text{font-size:13px;color:#b0b0b0;line-height:1.8;margin:0}
-    .legal-list{list-style:none;padding:0;margin:0 0 10px 0}
-    .legal-list li{margin:8px 0;font-size:13px}
-    .legal-list a{color:var(--brand);text-decoration:underline;transition:color .2s ease}
-    .legal-list a:hover{color:var(--accent)}
-    .legal-note{font-size:13px;color:#9aa0a6;margin-top:10px}
-    .legal-updated{text-align:center;margin-top:30px;font-size:.85em;color:var(--muted);border-top:1px dashed var(--border);padding-top:20px}
-    .legal-links{text-align:center;margin-top:15px;font-size:.9em;color:#muted}
-    .legal-links a{color:var(--brand);text-decoration:underline;margin:0 5px;transition:color .2s ease}
-    .legal-links a:hover{color:#00e6b8}
+    .legal-links{text-align:center;margin-top:15px;font-size:.9em}
 
     .reveal{opacity:0;transform:translateY(20px);transition:opacity .7s ease-out,transform .7s ease-out}
     .reveal.visible{opacity:1;transform:translateY(0)}
@@ -247,6 +238,7 @@
 
       <div class="card reveal">
         <h3>Highlights and Amenities</h3>
+        <!-- We’ll render two lists inside this container -->
         <ul id="highlightsList" class="highlights-list"></ul>
       </div>
 
@@ -453,9 +445,7 @@
       if(x==null) return "";
       if(typeof x==="string") return x;
       if(typeof x==="number") return String(x);
-      if(Array.isArray(x)){
-        return x.map(normToText).join(", ");
-      }
+      if(Array.isArray(x)) return x.map(normToText).join(", ");
       if(typeof x==="object"){
         if("text" in x) return String(x.text);
         if("name" in x) return String(x.name);
@@ -463,8 +453,6 @@
       }
       return String(x);
     }
-
-    // Keep arrays as arrays when Airtable returns lookups
     function normToArray(x){
       if(x==null) return [];
       if(Array.isArray(x)) return x.map(normToText);
@@ -473,12 +461,20 @@
       return [s];
     }
 
-    // Split bullets/lines/semicolons/pipes (NOT commas to avoid chopping sentences)
-    function splitMulti(str){
+    // People name splitting (specific to names: allow commas etc.)
+    function splitPeople(str){
+      return (str||"")
+        .split(/\s*(?:,|\/|\||\band\b|\&)\s*/gi)
+        .map(s=>s.trim())
+        .filter(Boolean);
+    }
+
+    // Feature splitting for highlights/amenities (include commas)
+    function splitFeatures(str){
       return (str||"")
         .replace(/\r/g,"\n")
         .replace(/[•\u2022]/g,"\n")
-        .split(/[\n;|]+/g)
+        .split(/[\n;,|]+/g)   // includes commas
         .map(s=>s.trim())
         .filter(Boolean);
     }
@@ -487,12 +483,19 @@
       return /^rec[a-zA-Z0-9]{14,}$/i.test(token);
     }
 
-    // Get first non-empty of possible field names
     function getField(obj, ...names){
       for(const n of names){
         if(obj && obj[n]!=null && String(obj[n]).trim()!=="") return obj[n];
       }
       return "";
+    }
+
+    function firstSentence(text){
+      const t=(text||"").trim();
+      if(!t) return "";
+      const m=t.match(/(.+?[.!?])(\s|$)/);
+      if(m) return m[1];
+      return t.length>160 ? t.slice(0,160).trim()+"…" : t;
     }
 
     function toEmbed(raw){
@@ -547,22 +550,18 @@
       // About home
       const aboutHomeFull=document.getElementById('aboutFull');
       const aboutTextHome=normToText(getField(p,'Description','Property Description'))||'No description available for this property.';
-      aboutHomeFull.innerHTML=`<p>${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
+      aboutHomeFull.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Highlights & Amenities (robust parsing; no comma splitting)
-      const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const highlightsRaw = getField(p,'Highlights');
-      const amenitiesRaw = getField(p,'Amenities');
-      const highlightItems = splitMulti(normToText(highlightsRaw));
-      const amenityItems  = splitMulti(normToText(amenitiesRaw));
-      const combo=[...highlightItems,...amenityItems].filter(Boolean);
-      if(combo.length){
-        combo.forEach(item=>{
-          const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; highlightsList.appendChild(li);
-        });
-      }else{
-        highlightsList.innerHTML='<li><span>No highlights or amenities listed.</span></li>';
-      }
+      // Highlights & Amenities (SEPARATE lists)
+      const container=document.getElementById('highlightsList');
+      const highlightsItems=splitFeatures(normToText(getField(p,'Highlights')));
+      const amenitiesItems=splitFeatures(normToText(getField(p,'Amenities')));
+      const renderList = (title, items) => {
+        if(!items.length) return `<li><span style="color:var(--muted)">${title}: not provided.</span></li>`;
+        return `<li style="display:block;border:none;padding:0 0 6px 0;font-weight:600">${title}</li>` +
+               items.map(i=>`<li><span>${i}</span></li>`).join('');
+      };
+      container.innerHTML = renderList('Highlights', highlightsItems) + renderList('Amenities', amenitiesItems);
 
       // Gallery
       lbImages=normToText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
@@ -570,16 +569,18 @@
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
-      // Builder (unchanged)
-      const builderNames=splitMulti(normToText(p['Builder Owners']));
-      const builderPhotos=splitMulti(normToText(p['Builder Photo']));
-      const builderTitles=splitMulti(normToText(p['Builder Owner Titles']));
+      // Builder — support multiple owners
+      const builderNamesRaw = getField(p,'Builder Owners');
+      const builderNames = Array.isArray(builderNamesRaw) ? normToArray(builderNamesRaw) : splitPeople(normToText(builderNamesRaw));
+      const builderPhotos=normToArray(getField(p,'Builder Photo'));
+      const builderTitles=normToArray(getField(p,'Builder Owner Titles'));
+      const builderAbout=normToText(getField(p,'Builder About'));
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
       if(!builderNames.length){builderCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Builder information not available.</p>';}
       builderNames.forEach((name,i)=>{
         const title=builderTitles[i]||'Builder';
-        const aboutText=normToText(p['Builder About']) || `Learn more about ${name}, a dedicated builder specializing in ${title}.`;
         const photoUrl=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
+        const aboutText=builderAbout||`Learn more about ${name}.`;
         builderCardsContainer.innerHTML+=`
           <div class="card reveal builder-card">
             <div class="agent-top">
@@ -589,19 +590,18 @@
                 <div class="agent-tag">${title}</div>
               </div>
             </div>
-            <p class="about-line">${aboutText}</p>
+            <p class="about-line">${firstSentence(aboutText)}</p>
             <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>
           </div>`;
       });
 
-      // LISTING AGENTS — exact, full names from "Listing Agent 2"; full bios matched by index from "About Agent"
+      // LISTING AGENTS — exact names + short excerpt, full bio in modal
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
+      const namesField = getField(p,'Listing Agent 2');
+      const agentNames = Array.isArray(namesField)
+        ? normToArray(namesField)
+        : splitPeople(normToText(namesField)).filter(t=>t && !isRecordId(t));
 
-      // 1) Names: authoritative source
-      const agentNames = splitMulti(normToText(getField(p,'Listing Agent 2')))
-        .filter(t => t && !isRecordId(t));
-
-      // 2) Bios/photos/emails/phones as arrays (Airtable lookups map by index)
       const biosArr    = normToArray(getField(p,'About Agent','Agent Bios'));
       const photosArr  = normToArray(getField(p,'Agent Photo'));
       const emailsArr  = normToArray(getField(p,'Agent Email'));
@@ -612,12 +612,13 @@
         agentCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>';
       } else {
         agentNames.forEach((name,i)=>{
-          const bioFull = biosArr[i] ? normToText(biosArr[i]) : '';
+          const bioFull  = biosArr[i] ? normToText(biosArr[i]) : '';
+          const excerpt  = firstSentence(bioFull) || 'Bio coming soon.';
           const photoUrl = photosArr[i] ? normToText(photosArr[i]) : 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-          const email = emailsArr[i] ? normToText(emailsArr[i]) : '';
-          const telRaw = phonesArr[i] ? normToText(phonesArr[i]) : '';
-          const tel = telRaw.replace(/[^0-9+]/g,'');
-          const title = titlesArr[i] ? normToText(titlesArr[i]) : 'Real Estate Agent';
+          const email    = emailsArr[i] ? normToText(emailsArr[i]) : '';
+          const telRaw   = phonesArr[i] ? normToText(phonesArr[i]) : '';
+          const tel      = telRaw.replace(/[^0-9+]/g,'');
+          const title    = titlesArr[i] ? normToText(titlesArr[i]) : 'Real Estate Agent';
 
           agentCardsContainer.innerHTML+=`
             <div class="card reveal agent-card">
@@ -628,7 +629,7 @@
                   <div class="agent-tag">${title}</div>
                 </div>
               </div>
-              ${bioFull ? `<p>${bioFull}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
+              <p class="about-line">${excerpt}</p>
               ${bioFull ? `<button class="btn" onclick="openModal('agentModal', \`<p>${bioFull.replace(/'/g,"\\'")}</p>\`)">Read More</button>` : ''}
               <div class="agent-actions">
                 ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${name}">📞&nbsp;Call</a>`:''}
