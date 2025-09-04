@@ -164,7 +164,7 @@
     .about-line{-webkit-line-clamp:2;-webkit-box-orient:vertical;display:-webkit-box;overflow:hidden;margin-bottom:10px;line-height:1.5}
     .modal-content p{margin-bottom:15px;line-height:1.7}
 
-    footer.legal-footer{border-top:1px solid var(--border);padding:40px 24px;background:#000;color:#muted;font-size:.9em;width:100%}
+    footer.legal-footer{border-top:1px solid var(--border);padding:40px 24px;background:#000;color:#b0b0b0;font-size:.9em;width:100%}
     .legal-wrap{max-width:1200px;margin:0 auto;display:flex;flex-direction:column}
     .legal-grid{display:grid;grid-template-columns:1fr;gap:30px;margin-top:25px}
     @media (min-width:900px){.legal-grid{grid-template-columns:1.5fr 1fr}}
@@ -176,7 +176,7 @@
     .legal-list a:hover{color:var(--accent)}
     .legal-note{font-size:13px;color:#9aa0a6;margin-top:10px}
     .legal-updated{text-align:center;margin-top:30px;font-size:.85em;color:var(--muted);border-top:1px dashed var(--border);padding-top:20px}
-    .legal-links{text-align:center;margin-top:15px;font-size:.9em;color:#muted}
+    .legal-links{text-align:center;margin-top:15px;font-size:.9em;color:var(--muted)}
     .legal-links a{color:var(--brand);text-decoration:underline;margin:0 5px;transition:color .2s ease}
     .legal-links a:hover{color:var(--accent)}
 
@@ -345,7 +345,9 @@
   </footer>
 
   <script>
-    // Reveal on scroll
+    /* =========================
+       Reveal on scroll
+    ========================== */
     const onScrollReveal = () => {
       document.querySelectorAll('.reveal').forEach(el => {
         const r = el.getBoundingClientRect();
@@ -355,7 +357,9 @@
     window.addEventListener('scroll', onScrollReveal);
     window.addEventListener('load', onScrollReveal);
 
-    // Modals
+    /* =========================
+       Modals
+    ========================== */
     const openModal = (modalId, content) => {
       const modal = document.getElementById(modalId);
       const modalContentDiv = modal.querySelector('.modal-text-content');
@@ -377,7 +381,9 @@
       if (e.key === 'Escape') document.querySelectorAll('.modal.show').forEach(m => closeModal(m.id));
     });
 
-    // Lightbox
+    /* =========================
+       Lightbox
+    ========================== */
     let lbIndex = 0, lbImages = [];
     const mainGalleryImg = document.getElementById('mainGalleryImg');
     function updateMainImage(i){
@@ -398,14 +404,14 @@
     document.getElementById('lightboxPrev').onclick=()=>{lbIndex=(lbIndex-1+lbImages.length)%lbImages.length;updateLightbox();}
     document.getElementById('lightboxNext').onclick=()=>{lbIndex=(lbIndex+1)%lbImages.length;updateLightbox();}
 
-    // Haversine (miles)
+    /* =========================
+       Map + Nearby
+    ========================== */
     function haversine(lat1,lon1,lat2,lon2){
       const R=3958.8, φ1=lat1*Math.PI/180, φ2=lat2*Math.PI/180, dφ=(lat2-lat1)*Math.PI/180, dλ=(lon2-lon1)*Math.PI/180;
       const a=Math.sin(dφ/2)**2+Math.cos(φ1)*Math.cos(φ2)*Math.sin(dλ/2)**2;
       return R*(2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a)));
     }
-
-    // OSM Overpass for nearby
     function searchAndDisplayAmenities(p,listId,queryTypes,title){
       const list=document.getElementById(listId);
       list.innerHTML='<li class="nearby-item"><small>Searching for nearby '+title.toLowerCase()+'...</small></li>';
@@ -435,7 +441,6 @@
         })
         .catch(e=>{console.error('Overpass API error:',e);list.innerHTML='<li class="nearby-item"><small>Failed to load nearby '+title.toLowerCase()+'.</small></li>';});
     }
-
     function initMapLeaflet(p){
       const mapEl=document.getElementById('map');
       if(!p.Latitude||!p.Longitude){mapEl.innerHTML='<div style="padding:20px;text-align:center;color:var(--muted);">Location not available.</div>';return;}
@@ -447,55 +452,42 @@
       searchAndDisplayAmenities(p,'schoolsList','school','schools');
     }
 
-    // ---------- helpers ----------
-    function asText(v){
-      if(v==null) return "";
-      if(typeof v==="string") return v;
-      if(Array.isArray(v)){
-        return v.map(x=> typeof x==="string" ? x :
-          (x&&typeof x==="object"&&"text" in x) ? String(x.text) :
-          (x&&x.url)? x.url : String(x)
-        ).join(", ");
+    /* =========================
+       Data helpers (IMPORTANT)
+    ========================== */
+    // Return arrays reliably. Do NOT split long bios on commas/newlines.
+    function asArray(v){
+      if (v == null) return [];
+      if (Array.isArray(v)) {
+        return v.map(x => (x && typeof x === 'object')
+          ? (x.name ?? x.text ?? x.url ?? String(x))
+          : String(x));
       }
-      if(typeof v==="object"){
-        if("text" in v) return String(v.text);
-        try{return JSON.stringify(v);}catch(e){return String(v);}
-      }
-      return String(v);
+      const s = String(v).trim();
+      try {
+        const j = JSON.parse(s);
+        if (Array.isArray(j)) return j.map(x => String(x));
+      } catch {}
+      // Only split if explicit "||" delimiter is used in your data.
+      if (s.includes('||')) return s.split('||').map(x => x.trim()).filter(Boolean);
+      return [s];
     }
-
-    function splitMulti(str){
-      return (str||"")
-        .split(/[,;\n|]/g)
-        .map(s=>s.trim())
-        .filter(Boolean);
+    function firstWords(str, n=28){
+      const w = String(str||'').trim().split(/\s+/);
+      return w.length <= n ? str : w.slice(0,n).join(' ') + '…';
     }
-
-    function isRecordId(token){
-      return /^rec[a-zA-Z0-9]{14,}$/i.test(token);
-    }
-    function nameFromEmail(email){
-      if(!email) return "";
-      const base = String(email).split("@")[0].replace(/[._-]+/g," ");
-      return base.replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    // Normalize share links to embeddable URLs
     function toEmbed(raw){
       const url=(raw||"").trim(); if(!url) return "";
-      // Matterport
       if(/matterport\.com/i.test(url) || /^[A-Za-z0-9]{8,}$/.test(url)){
         const m=url.match(/[?&]m=([A-Za-z0-9]+)|\/show\/\?m=([A-Za-z0-9]+)/i);
         const idOnly=url.match(/^[A-Za-z0-9]{8,}$/);
         const id=(m&&(m[1]||m[2]))||(idOnly&&idOnly[0])||"";
         return id ? `https://my.matterport.com/show/?m=${id}&play=1&brand=0&mls=1&qs=1&embed=1` : url;
       }
-      // YouTube
       if(/youtu\.be|youtube\.com/i.test(url)){
         const id=(url.match(/youtu\.be\/([A-Za-z0-9_-]+)/i)||[])[1]||(url.match(/[?&]v=([A-Za-z0-9_-]+)/i)||[])[1]||"";
         return id ? `https://www.youtube.com/embed/${id}?rel=0&modestbranding=1` : url;
       }
-      // Vimeo
       if(/vimeo\.com/i.test(url)){
         const id=(url.match(/vimeo\.com\/(\d+)/)||[])[1]||"";
         return id ? `https://player.vimeo.com/video/${id}` : url;
@@ -503,69 +495,69 @@
       return url;
     }
 
+    /* =========================
+       Populate page
+    ========================== */
     function populate(p){
       // Hero
       const hero=document.getElementById('heroBg');
-      const heroSrc=asText(p.HeroImageURL)||(asText(p.GalleryURLsCSV).split(',')[0]||'').trim();
+      const heroSrc=(asArray(p.HeroImageURL)[0]) || (asArray(p.GalleryURLsCSV)[0]||'');
       if(heroSrc) hero.style.backgroundImage=`url('${heroSrc}')`;
-      document.getElementById('projectName').textContent=asText(p['Project Name'])||'New Development';
-      document.getElementById('projectAddress').textContent=asText(p.Address)||'Address not available';
+      document.getElementById('projectName').textContent=(asArray(p['Project Name'])[0])||'New Development';
+      document.getElementById('projectAddress').textContent=(asArray(p.Address)[0])||'Address not available';
 
-      // Elite Signature badge (>$1M)
-      const priceStr=asText(p['Listing Price']);
-      const num=Number(String(priceStr).replace(/[^0-9.]/g,''));
+      // Elite badge (>$1M)
+      const priceStr=(asArray(p['Listing Price'])[0]||'').toString();
+      const num=Number(priceStr.replace(/[^0-9.]/g,''));
       if(num>1000000) document.getElementById('eliteBadge').classList.remove('hidden'); else document.getElementById('eliteBadge').classList.add('hidden');
 
-      // At a glance
+      // At a Glance
       const gl=document.getElementById('glanceList'); gl.innerHTML='';
-      const completionDate=p['Estimated Completion']? new Date(asText(p['Estimated Completion'])).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
-      const formattedPrice=priceStr? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(parseFloat(String(priceStr).replace(/[^0-9.]/g,''))) : 'N/A';
+      const completionDate=p['Estimated Completion']? new Date(asArray(p['Estimated Completion'])[0]).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : 'N/A';
+      const formattedPrice=priceStr? new Intl.NumberFormat('en-US',{style:'currency',currency:'USD',minimumFractionDigits:0,maximumFractionDigits:0}).format(parseFloat(priceStr.replace(/[^0-9.]/g,''))) : 'N/A';
       const glanceData={
-        'Status':asText(p.Status)||'N/A',
+        'Status':(asArray(p.Status)[0])||'N/A',
         'Price':formattedPrice,
-        'Beds':asText(p.Beds)||'N/A',
-        'Baths':asText(p.Baths)||'N/A',
-        'Sq Footage':(asText(p['Sq Footage'])?`${asText(p['Sq Footage'])} sq ft`:'N/A'),
+        'Beds':(asArray(p.Beds)[0])||'N/A',
+        'Baths':(asArray(p.Baths)[0])||'N/A',
+        'Sq Footage':(asArray(p['Sq Footage'])[0]?`${asArray(p['Sq Footage'])[0]} sq ft`:'N/A'),
         'Estimated Completion':completionDate
       };
       Object.entries(glanceData).forEach(([k,v])=>{
         if(v && v!=='N/A'){const li=document.createElement('li');li.innerHTML=`<span>${k}</span><span>${v}</span>`;gl.appendChild(li);}
       });
-      if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
+      if(asArray(p['Site Plans'])[0]){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asArray(p['Site Plans'])[0]}" target="_blank" class="btn">View Plan</a>`;gl.appendChild(li);}
 
-      // About home
+      // About this Home
       const aboutHomeFull=document.getElementById('aboutFull');
-      const aboutTextHome=asText(p.Description)||'No description available for this property.';
-      aboutHomeFull.innerHTML=`<p class="about-line">${aboutTextHome}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
+      const aboutTextHome=(asArray(p.Description)[0])||'No description available for this property.';
+      aboutHomeFull.innerHTML=`<p class="about-line">${firstWords(aboutTextHome, 36)}</p><button class="btn" onclick="openModal('aboutModal', \`<p>${aboutTextHome.replace(/'/g,"\\'")}</p>\`)">Read More</button>`;
 
-      // Highlights & Amenities (combine both fields)
-      const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const highlightsArr=splitMulti(asText(p['Highlights']));
-      const amenitiesArr=splitMulti(asText(p['Amenities']));
-      const combo=[...highlightsArr,...amenitiesArr].filter(Boolean);
-      if(combo.length){
-        combo.forEach(item=>{
-          const li=document.createElement('li'); li.innerHTML=`<span>${item}</span>`; highlightsList.appendChild(li);
-        });
-      }else{
-        highlightsList.innerHTML='<li><span>No highlights or amenities listed.</span></li>';
-      }
+      // Highlights + Amenities
+      const highlights = asArray(p['Highlights']);
+      const amenities  = asArray(p['Amenities']);
+      const combo = [...highlights, ...amenities].filter(Boolean);
+      const highlightsList=document.getElementById('highlightsList');
+      highlightsList.innerHTML = combo.length
+        ? combo.map(x=>`<li><span>${x}</span></li>`).join('')
+        : '<li><span>No highlights or amenities listed.</span></li>';
 
       // Gallery
-      lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
+      lbImages = asArray(p.GalleryURLsCSV).map(s=>s.trim()).filter(Boolean);
       const galleryThumbsContainer=document.getElementById('galleryThumbs'); galleryThumbsContainer.innerHTML='';
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
       // Builder
-      const builderNames=splitMulti(asText(p['Builder Owners']));
-      const builderPhotos=splitMulti(asText(p['Builder Photo']));
-      const builderTitles=splitMulti(asText(p['Builder Owner Titles']));
+      const builderNames = asArray(p['Builder Owners']);
+      const builderPhotos= asArray(p['Builder Photo']);
+      const builderTitles= asArray(p['Builder Owner Titles']);
+      const builderAbouts= asArray(p['Builder About']);
       const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
       if(!builderNames.length){builderCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Builder information not available.</p>';}
       builderNames.forEach((name,i)=>{
         const title=builderTitles[i]||'Builder';
-        const aboutText=asText(p['Builder About']) || `Learn more about ${name}, a dedicated builder specializing in ${title}.`;
+        const aboutText=builderAbouts[i]||`Learn more about ${name}.`;
         const photoUrl=builderPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         builderCardsContainer.innerHTML+=`
           <div class="card reveal builder-card">
@@ -576,43 +568,30 @@
                 <div class="agent-tag">${title}</div>
               </div>
             </div>
-            <p class="about-line">${aboutText}</p>
+            <p class="about-line">${firstWords(aboutText, 32)}</p>
             <button class="btn" onclick="openModal('builderModal', \`<p>${aboutText.replace(/'/g,"\\'")}</p>\`)">Read More</button>
           </div>`;
       });
 
-      // Agents (from "Listing Agent 2"), no hardcoding; use About Agent field
-      const rawAgentNames=splitMulti(asText(p['Listing Agent 2']));
-      let agentNames=rawAgentNames.filter(t => !isRecordId(t) && /[A-Za-z]/.test(t));
-      const agentPhotos=splitMulti(asText(p['Agent Photo']));
-      const agentEmails=splitMulti(asText(p['Agent Email']));
-      const agentPhones=splitMulti(asText(p['Agent Phone Number']));
-      const agentTitles=splitMulti(asText(p['Agent Title']));
-      const agentBios  =splitMulti(asText(p['About Agent'] || p['Agent Bio'] || p['Agent Bios']));
-
-      if(!agentNames.length){
-        const alt = splitMulti(asText(p['Agent Names'] || p['Agent Name']));
-        if(alt.length) agentNames = alt;
-      }
-      if(!agentNames.length && agentEmails.length){
-        agentNames = agentEmails.map(nameFromEmail);
-      }
+      // Agents — EXACT fields, no fabrication
+      const agentNames  = asArray(p['Listing Agent 2']);        // should be names (server should resolve linked records)
+      const agentPhotos = asArray(p['Agent Photo']);
+      const agentEmails = asArray(p['Agent Email']);
+      const agentPhones = asArray(p['Agent Phone Number']);
+      const agentTitles = asArray(p['Agent Title']);
+      const agentBios   = asArray(p['About Agent']);            // long text
 
       const agentCardsContainer=document.getElementById('agentCards'); agentCardsContainer.innerHTML='';
       if(!agentNames.length){
         agentCardsContainer.innerHTML='<p style="text-align:center;color:var(--muted);">Agent information not available.</p>';
       } else {
         agentNames.forEach((name,i)=>{
-          const tel=(agentPhones[i]||'').replace(/[^0-9+]/g,'');
+          const tel=(String(agentPhones[i]||'').replace(/[^0-9+]/g,''));
           const email=agentEmails[i]||'';
           const title=agentTitles[i]||'Real Estate Agent';
           const photoUrl=agentPhotos[i]||'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
-
-          const bioFull = (agentBios[i] && agentBios[i].length>8)
-            ? agentBios[i]
-            : 'Bio coming soon.';
-          const firstSentence = bioFull.split('.').filter(Boolean)[0] || 'Bio coming soon';
-          const excerpt = firstSentence.endsWith('.') ? firstSentence : firstSentence + '.';
+          const bioFull = agentBios[i] || ''; // do NOT invent
+          const excerpt = bioFull ? firstWords(bioFull, 28) : 'Bio coming soon.';
 
           agentCardsContainer.innerHTML+=`
             <div class="card reveal agent-card">
@@ -624,7 +603,7 @@
                 </div>
               </div>
               <p class="about-line">${excerpt}</p>
-              <button class="btn" onclick="openModal('agentModal', \`<p>${bioFull.replace(/'/g,"\\'")}</p>\`)">Read More</button>
+              <button class="btn" onclick="openModal('agentModal', \`<p>${(bioFull||'Bio coming soon.').replace(/'/g,"\\'")}</p>\`)">Read More</button>
               <div class="agent-actions">
                 ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${name}">📞&nbsp;Call</a>`:''}
                 ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${name}">💬&nbsp;Text</a>`:''}
@@ -634,11 +613,11 @@
         });
       }
 
-      // Media embeds — two Matterports side-by-side, video below
+      // Media embeds
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
-      const pre = toEmbed(asText(p['Pre Dry Wall Matterport']));
-      const fin = toEmbed(asText(p['Final Matterport']));
-      const vid = toEmbed(asText(p['Marketing Video']));
+      const pre = toEmbed((asArray(p['Pre Dry Wall Matterport'])[0]||''));
+      const fin = toEmbed((asArray(p['Final Matterport'])[0]||''));
+      const vid = toEmbed((asArray(p['Marketing Video'])[0]||''));
       let html=''; const mp=[];
       if(pre){
         mp.push(`
@@ -664,7 +643,7 @@
       if(vid){
         html += `
           <div class="card reveal marketing-video">
-            <h3>Video Tour</h3>
+            <h3>Marketing Video</h3>
             <div class="embed"><iframe src="${vid}" title="Marketing Video" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
           </div>`;
       }
@@ -674,7 +653,9 @@
       initMapLeaflet(p);
     }
 
-    // Netlify function
+    /* =========================
+       Netlify function
+    ========================== */
     async function fetchProject(slug){
       const res=await fetch(`/.netlify/functions/project?slug=${encodeURIComponent(slug)}`);
       if(!res.ok) throw new Error(`API error ${res.status}`);
@@ -683,7 +664,9 @@
       return data.project;
     }
 
-    // Boot
+    /* =========================
+       Boot
+    ========================== */
     window.addEventListener('DOMContentLoaded', async ()=>{
       try{
         const params=new URLSearchParams(location.search);
