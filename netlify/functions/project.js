@@ -11,8 +11,60 @@ export async function handler(event) {
       return resp(500, { error: "Missing Airtable env vars (AIRTABLE_API_KEY, AIRTABLE_BASE_ID)" });
     }
 
-    // Match either {Slug} or {Project Name}
-    const formula = `OR({Slug}='${escapeAirtable(slug)}',{Project Name}='${escapeAirtable(slug)}')`;
+    // ---- Super-forgiving matching -----------------------------------------
+    // raw   = original param (trim)
+    // q     = lowercased
+    // qf    = "folded" (lowercased and common separators removed)
+    // qr/qfr = regex-safe versions for REGEX_MATCH fallbacks
+    const raw = String(slug || "").trim();
+    const q   = raw.toLowerCase();
+    const qf  = fold(q);                 // remove spaces, -, _, /, ., apostrophes, long dashes, commas, parentheses
+    const qr  = escapeRegex(q);          // regex-safe
+    const qfr = escapeRegex(qf);         // regex-safe (folded)
+
+    // Build expressions that coerce fields to text to avoid errors when blank
+    const fSlug = "LOWER({Slug}&'')";
+    const fName = "LOWER({Project Name}&'')";
+    const fId   = "LOWER({ProjectID}&'')";
+
+    // Normalized ("folded") field expressions (remove separators inside Airtable)
+    const norm = (fld) =>
+      `LOWER(` +
+        `SUBSTITUTE(` +
+          `SUBSTITUTE(` +
+            `SUBSTITUTE(` +
+              `SUBSTITUTE(` +
+                `SUBSTITUTE(` +
+                  `SUBSTITUTE(` +
+                    `SUBSTITUTE(` +
+                      `SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_' , ''), '/', ''), '.', ''), '’',''), '''',''), ',','')` +
+            `, '(', '' )` +
+          `, ')', '' )` +
+      `)`;
+
+    const nSlug = norm("{Slug}");
+    const nName = norm("{Project Name}");
+    const nId   = norm("{ProjectID}");
+
+    // Case-insensitive equals, folded equals, and regex contains fallbacks
+    const formula = `OR(
+      ${fSlug}='${escapeAirtable(q)}',
+      ${fName}='${escapeAirtable(q)}',
+      ${fId}  ='${escapeAirtable(q)}',
+
+      ${nSlug}='${escapeAirtable(qf)}',
+      ${nName}='${escapeAirtable(qf)}',
+      ${nId}  ='${escapeAirtable(qf)}',
+
+      REGEX_MATCH(${fSlug}, '${escapeAirtable(qr)}'),
+      REGEX_MATCH(${fName}, '${escapeAirtable(qr)}'),
+      REGEX_MATCH(${fId},   '${escapeAirtable(qr)}'),
+
+      REGEX_MATCH(${nSlug}, '${escapeAirtable(qfr)}'),
+      REGEX_MATCH(${nName}, '${escapeAirtable(qfr)}'),
+      REGEX_MATCH(${nId},   '${escapeAirtable(qfr)}')
+    )`;
+
     const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
 
     const res = await fetch(url, { headers: { Authorization: `Bearer ${apiKey}` } });
@@ -43,16 +95,16 @@ export async function handler(event) {
       "HeroImageURL": firstAssetUrl(f["HeroImageURL"], f["Hero Image"], f["Hero"]) || "",
       "GalleryURLsCSV": toCsvUrls(f["GalleryURLsCSV"], f["Gallery"], f["Photos"]) || "",
 
-      // ===== BUILDER (added the specific fields you’re using) =====
+      // ===== BUILDER (specific fields you’re using) =====
       "Builder Owners": toCsvText(f["Builder Owners"]),
       "Builder Photo": toCsvUrls(f["Builder Photo"], f["Builder Photos"]) || "",
       "Builder Owner Titles": toCsvText(f["Builder Owner Titles"]),
-      "Builder Latrice": f["Builder Latrice"] || "",     // name (full)
-      "Builder JT": f["Builder JT"] || "",               // name (full)
-      "About Latrice": f["About Latrice"] || "",         // bio
-      "About JT": f["About JT"] || "",                   // bio
+      "Builder Latrice": f["Builder Latrice"] || "",
+      "Builder JT": f["Builder JT"] || "",
+      "About Latrice": f["About Latrice"] || "",
+      "About JT": f["About JT"] || "",
 
-      // ===== HIGHLIGHTS & AMENITIES (added) =====
+      // ===== HIGHLIGHTS & AMENITIES =====
       "Highlights": f["Highlights"] || f["Project Highlights"] || f["Property Highlights"] || "",
       "Amenities":  f["Amenities"]  || f["Project Amenities"]  || f["Property Amenities"]  || "",
 
@@ -62,7 +114,7 @@ export async function handler(event) {
       "Pre Dry Wall Matterport": f["Pre Dry Wall Matterport"] || f["PreDrywall Matterport"] || "",
       "Final Matterport": f["Final Matterport"] || "",
 
-      // Listing Agents (Joseph = first, Cliff = second handled in the frontend)
+      // Listing Agents (Joseph first, Cliff second handled in frontend)
       "Listing Agent 2": toCsvText(f["Listing Agent 2"] || f["Listing Agents"]),
       "Agent Photo": toCsvUrls(f["Agent Photo"], f["Agent Photos"]) || "",
       "Agent Phone Number": toCsvText(f["Agent Phone Number"]),
@@ -93,8 +145,21 @@ function resp(status, body) {
   };
 }
 
+// Escape single quotes for Airtable formula literals
 function escapeAirtable(str) {
   return String(str).replace(/'/g, "\\'");
+}
+
+// Remove common separators/punctuation for our "folded" comparison
+function fold(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/[\s_\-\/\.,'’–—(),]/g, "");
+}
+
+// Escape regex special chars so we can safely use REGEX_MATCH
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 // If a field is an attachment array, return first url; if it's a string, return it; else ""
