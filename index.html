@@ -1,6 +1,3 @@
-you got it! here’s the **fully refreshed `index.html`** with the “Read More” buttons fixed (no weird characters). I added the `escHTML()` helper and swapped the three buttons to use it.
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -37,7 +34,8 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
 
     .hero{position:relative;height:50vh;min-height:400px;overflow:hidden;border-bottom:1px solid var(--border);display:flex;align-items:flex-end;padding:30px;width:100%}
     .hero-bg{position:absolute;inset:0;background-size:cover;background-position:center;filter:brightness(.65);animation:zoompan 35s infinite alternate ease-in-out;transform-origin:center center;width:100%;height:100%}
-    .hero-overlay{position:absolute;inset:0;background:radial-gradient(1000px 500px at 20% 20%,var(--glow-brand),transparent 70%),radial-gradient(1000px 500px at 80% 60%,var(--glow-accent),transparent 70%)}
+    /* removed color flares over hero */
+    .hero-overlay{position:absolute;inset:0;background:none !important;}
     .hero-content{position:relative;z-index:5;text-shadow:0 4px 12px var(--shadow-dark);width:100%;max-width:100%}
     .title-xl{font-size:clamp(32px,6vw,56px);font-family:'Cinzel', 'Times New Roman', serif;margin:0 0 8px;line-height:1.1;color:#fff}
     .subtitle{color:var(--muted);margin:0;font-size:1.1em}
@@ -177,30 +175,21 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
     @keyframes zoompan{0%{transform:scale(1.05)}100%{transform:scale(1.15)}}
     @keyframes pulseGlow{0%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent)}50%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 30px var(--glow-accent)}100%{box-shadow:0 0 20px rgba(0,0,0,.6) inset,0 0 15px var(--glow-accent)}}
 
-    /* ===== New styles ===== */
-    /* clamp long feature bullets */
+    /* ===== New styles for features ===== */
     .feature-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px 18px;padding:6px 0}
     .feature-list li{border:0;padding:0;display:flex;align-items:flex-start;gap:10px}
     .feature-list li::before{content:"•";opacity:.55;line-height:1.2}
     .feature-list li span{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
     .feature-actions{margin-top:12px}
-    /* remove glow tint only (keep zoom animation) */
-    .hero-overlay{background:none !important;}
-    /* respect user reduced motion */
     @media (prefers-reduced-motion: reduce){ .hero-bg{animation:none} }
-    /* print-friendly flyer */
     @media print{
       .site-header,.main-nav,.lightbox,.modal,.legal-footer,.hero-overlay{display:none!important}
       .hero{height:auto;min-height:auto;padding:0;border:0}
       .card{box-shadow:none;border:1px solid #ccc;break-inside:avoid}
     }
-    /* sticky CTA */
-    .fab-cta{position:fixed;left:18px;bottom:18px;z-index:1100}
-    .fab-cta .btn{border-radius:999px;padding:12px 18px;box-shadow:0 10px 30px rgba(0,0,0,.35)}
   </style>
 </head>
 <body>
-  <!-- Accessibility: Skip link -->
   <a href="#main" style="position:absolute;left:-9999px;top:auto;width:1px;height:1px;overflow:hidden;">Skip to content</a>
 
   <header class="site-header reveal">
@@ -309,26 +298,12 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
     </div>
   </div>
 
-  <!-- CTA Modal (contact + QR) -->
-  <div id="ctaModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="ctaModalTitle">
-    <div class="modal-content">
-      <button id="ctaClose" class="modal-close" aria-label="Close">×</button>
-      <h3 id="ctaModalTitle">Schedule a Tour</h3>
-      <div id="ctaBody" class="modal-text-content"></div>
-    </div>
-  </div>
-
   <!-- Lightbox -->
   <div id="lightbox" class="lightbox" role="dialog" aria-modal="true" aria-label="Gallery">
     <button id="lightboxClose" class="modal-close" aria-label="Close">×</button>
     <button id="lightboxPrev" class="lightbox-arrow prev" aria-label="Previous image">‹</button>
     <img id="lightboxImg" alt="Gallery image" />
     <button id="lightboxNext" class="lightbox-arrow next" aria-label="Next image">›</button>
-  </div>
-
-  <!-- Sticky CTA -->
-  <div class="fab-cta">
-    <button id="ctaBtn" class="btn">Schedule a Tour</button>
   </div>
 
   <footer class="legal-footer">
@@ -426,7 +401,6 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
     document.getElementById('aboutClose').onclick = () => closeModal('aboutModal');
     document.getElementById('builderClose').onclick = () => closeModal('builderModal');
     document.getElementById('agentClose').onclick = () => closeModal('agentModal');
-    document.getElementById('ctaClose').onclick = () => closeModal('ctaModal');
     document.querySelectorAll('.modal').forEach(m => {
       m.addEventListener('click', (e) => { if (e.target === m) closeModal(m.id); });
     });
@@ -570,7 +544,7 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       return url;
     }
 
-    /* ===== NEW HELPERS ===== */
+    // Escape HTML safely
     function escHTML(s){
       return String(s || '')
         .replace(/&/g,'&amp;')
@@ -580,7 +554,23 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
         .replace(/'/g,'&#39;');
     }
 
-    // prefer short items first for initial view; clamp handled by CSS
+    // Turn raw text with newlines into paragraphs
+    function formatTextHTML(s){
+      const parts = String(s||'').split(/\n{2,}/).map(t => escHTML(t).replace(/\n/g,'<br>'));
+      return parts.map(p=>`<p>${p}</p>`).join('') || '<p>No additional details.</p>';
+    }
+
+    // First sentence (or trim)
+    function firstSentence(text, maxChars=220){
+      if(!text) return "";
+      const s = String(text).replace(/\s+/g,' ').trim();
+      const m = s.match(/(.+?[.!?])(\s|$)/);
+      let out = m ? m[1] : s;
+      if(out.length > maxChars) out = out.slice(0, maxChars-1).trim() + "…";
+      return out;
+    }
+
+    // render feature lists with toggle
     function renderListWithToggle(listEl, items, max=6, label="items"){
       const sorted = (items||[]).slice().sort((a,b)=>a.length-b.length);
       listEl.innerHTML = "";
@@ -631,36 +621,19 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       }
     }
 
-    // split a 2-person field into [first, second]
-    function splitTwo(raw){
-      if(!raw) return ["",""];
-      const s = String(raw);
-      const byHard = s.split(/\n|[|;]+/).map(x=>x.trim()).filter(Boolean);
-      if(byHard.length >= 2) return [byHard[0], byHard.slice(1).join(' ')];
-      const idx = s.indexOf(',');
-      if(idx !== -1) return [s.slice(0, idx).trim(), s.slice(idx+1).trim()];
-      return [s.trim(), ""];
+    // utility: attach a read-more button to a slot
+    function attachReadMore(slotId, modalId, rawText, trackEvt, trackName){
+      const slot = document.getElementById(slotId);
+      if(!slot || !rawText) return;
+      const btn = document.createElement('button');
+      btn.className = 'btn';
+      btn.textContent = 'Read More';
+      btn.addEventListener('click', ()=>{
+        openModal(modalId, formatTextHTML(rawText));
+        if(trackEvt) track(trackEvt, {name: trackName || ''});
+      });
+      slot.appendChild(btn);
     }
-
-    // Find where the 2nd agent's name starts, then split the big bio
-    function splitBiosByNames(raw, name1='Joseph', name2='Cliff'){
-      if(!raw) return ["",""];
-      const s = String(raw);
-      const idx = s.search(new RegExp(`\\b${name2}\\b`, 'i'));
-      if(idx > 0) return [s.slice(0, idx).trim(), s.slice(idx).trim()];
-      return splitTwo(raw);
-    }
-
-    // First sentence (or trim to max chars) for card preview
-    function firstSentence(text, maxChars=220){
-      if(!text) return "";
-      const s = String(text).replace(/\s+/g,' ').trim();
-      const m = s.match(/(.+?[.!?])(\s|$)/);
-      let out = m ? m[1] : s;
-      if(out.length > maxChars) out = out.slice(0, maxChars-1).trim() + "…";
-      return out;
-    }
-    /* ===== END NEW HELPERS ===== */
 
     function populate(p){
       // Hero
@@ -675,24 +648,13 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       const num=Number(String(priceStr).replace(/[^0-9.]/g,''));
       if(num>1000000) document.getElementById('eliteBadge').classList.remove('hidden'); else document.getElementById('eliteBadge').classList.add('hidden');
 
-      // SEO / OG / Twitter + Schema
+      // SEO / OG / Schema (light)
       const title = `${asText(p['Project Name'])} • ${asText(p.Address)}`;
       const desc  = (asText(p.Description)||'New home development').slice(0,160);
       const heroImg  = (asText(p.HeroImageURL)||(asText(p.GalleryURLsCSV).split(',')[0]||'')).trim();
       document.title = title;
       setMeta('description', desc);
       setOG('og:title', title); setOG('og:description', desc); setOG('og:image', heroImg); setOG('og:type','website');
-      setMeta('twitter:card','summary_large_image'); setMeta('twitter:title',title); setMeta('twitter:description',desc); setMeta('twitter:image',heroImg);
-      setStructuredData({
-        "@context":"https://schema.org",
-        "@type":"RealEstateListing",
-        "name": asText(p['Project Name']),
-        "url": location.href,
-        "address": asText(p.Address),
-        "image": (asText(p.GalleryURLsCSV)||"").split(',').map(s=>s.trim()).filter(Boolean).slice(0,10),
-        "offers": {"@type":"Offer","price": num||undefined,"priceCurrency":"USD"},
-        "seller": {"@type":"RealEstateAgent","name":"Elite Living Realty"}
-      });
 
       // At a glance
       const gl=document.getElementById('glanceList'); gl.innerHTML='';
@@ -711,23 +673,17 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       });
       if(asText(p['Site Plans'])){const li=document.createElement('li');li.innerHTML=`<span>Site Plan</span><a href="${asText(p['Site Plans'])}" target="_blank" class="btn" onclick="track('siteplan_view')">View Plan</a>`;gl.appendChild(li);}
 
-      // About home (preview + modal w/ safe HTML)
+      // About home
       const aboutHomeFull=document.getElementById('aboutFull');
       const aboutTextHome=asText(p.Description)||'No description available for this property.';
-      aboutHomeFull.innerHTML =
-        `<p class="about-line">${firstSentence(aboutTextHome, 240)}</p>
-         <button class="btn"
-           onclick="openModal('aboutModal','<p>${escHTML(aboutTextHome)}</p>')">
-           Read More
-         </button>`;
+      aboutHomeFull.innerHTML = `<p class="about-line">${firstSentence(aboutTextHome, 240)}</p><div id="about-rm"></div>`;
+      attachReadMore('about-rm','aboutModal',aboutTextHome,'about_readmore','home');
 
-      // Highlights & Amenities (with toggle)
+      // Highlights & Amenities
       const highlightsArr = splitMulti(asText(getField(p, ['Highlights','Project Highlights','Property Highlights','features','project_highlights'])));
       const amenitiesArr  = splitMulti(asText(getField(p, ['Amenities','Project Amenities','Property Amenities','amenities','project_amenities'])));
-      const highlightsList=document.getElementById('highlightsList'); highlightsList.innerHTML='';
-      const amenitiesList=document.getElementById('amenitiesList'); amenitiesList.innerHTML='';
-      renderListWithToggle(highlightsList, highlightsArr, 6, "highlights");
-      renderListWithToggle(amenitiesList,  amenitiesArr,  6, "amenities");
+      renderListWithToggle(document.getElementById('highlightsList'), highlightsArr, 6, "highlights");
+      renderListWithToggle(document.getElementById('amenitiesList'),  amenitiesArr,  6, "amenities");
 
       // Gallery
       lbImages=asText(p.GalleryURLsCSV).split(',').map(s=>s.trim()).filter(Boolean);
@@ -752,16 +708,10 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       const photoLatrice = (photoLinks.find(u=>/latrice/i.test(u)) || photoLinks[0] || '').trim();
       const photoJT      = (photoLinks.find(u=>/\bjt\b/i.test(u))   || photoLinks[1] || '').trim();
 
-      function builderCardHTML(name, title, about, photo){
-        if(!name && !about) return '';
+      function builderCardHTML(name, title, about, photo, idx){
         const img = photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
         const titleHTML = title ? `<div class="agent-tag">${title}</div>` : '';
         const preview = firstSentence(about, 180);
-        const safeName = (name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
-        const modalHTML = about ? `<button class="btn"
-  onclick="openModal('builderModal','<p>${escHTML(about)}</p>'); track('builder_readmore',{name:'${safeName}'})">
-  Read More
-</button>` : '';
         return `
           <div class="card reveal builder-card">
             <div class="agent-top">
@@ -772,13 +722,16 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
               </div>
             </div>
             ${preview ? `<p class="about-line">${preview}</p>` : ''}
-            ${modalHTML}
+            <div id="builder-rm-${idx}" class="readmore-slot"></div>
           </div>`;
       }
 
       builderCardsContainer.innerHTML =
-        builderCardHTML(nameLatrice, titleLatrice, aboutLatrice, photoLatrice) +
-        builderCardHTML(nameJT,      titleJT,      aboutJT,      photoJT);
+        builderCardHTML(nameLatrice, titleLatrice, aboutLatrice, photoLatrice, 0) +
+        builderCardHTML(nameJT,      titleJT,      aboutJT,      photoJT,      1);
+
+      attachReadMore('builder-rm-0','builderModal',aboutLatrice,'builder_readmore',nameLatrice);
+      attachReadMore('builder-rm-1','builderModal',aboutJT,'builder_readmore',nameJT);
 
       // Agents (Joseph first, Cliff second)
       const agentCards = document.getElementById('agentCards'); agentCards.innerHTML='';
@@ -788,6 +741,23 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
       const phonesCSV = asText(getField(p,['Agent Phone Number']));
       const titlesCSV = asText(getField(p,['Agent Title']));
       const biosRaw   = asText(getField(p,['About Agent']));
+
+      function splitTwo(raw){
+        if(!raw) return ["",""];
+        const s = String(raw);
+        const byHard = s.split(/\n|[|;]+/).map(x=>x.trim()).filter(Boolean);
+        if(byHard.length >= 2) return [byHard[0], byHard.slice(1).join(' ')];
+        const idx = s.indexOf(',');
+        if(idx !== -1) return [s.slice(0, idx).trim(), s.slice(idx+1).trim()];
+        return [s.trim(), ""];
+      }
+      function splitBiosByNames(raw, name1='Joseph', name2='Cliff'){
+        if(!raw) return ["",""];
+        const s = String(raw);
+        const idx = s.search(new RegExp(`\\b${name2}\\b`, 'i'));
+        if(idx > 0) return [s.slice(0, idx).trim(), s.slice(idx).trim()];
+        return splitTwo(raw);
+      }
 
       const [photo1, photo2] = splitTwo(photosCSV);
       const [email1, email2] = splitTwo(emailsCSV);
@@ -800,29 +770,10 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
         { name:'Cliff Graham',  photo:photo2, email:email2, phone:phone2, title:title2||'Realtor', bio:bio2 }
       ];
 
-      // Fill CTA modal using first agent if present
-      const ctaBody = document.getElementById('ctaBody');
-      const joseph = agents[0] || {};
-      const josephTel = (joseph.phone||'').replace(/[^0-9+]/g,'');
-      const qrUrl = `https://chart.googleapis.com/chart?chs=240x240&cht=qr&chl=${encodeURIComponent(location.href)}`;
-      ctaBody.innerHTML = `
-        <p>We’d love to show you this property. Pick an option below:</p>
-        <div class="agent-actions">
-          ${josephTel?`<a href="tel:${josephTel}" class="icon-btn" onclick="track('cta_call',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">📞&nbsp;Call</a>`:''}
-          ${josephTel?`<a href="sms:${josephTel}" class="icon-btn" onclick="track('cta_text',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">💬&nbsp;Text</a>`:''}
-          ${joseph.email?`<a href="mailto:${joseph.email}" class="icon-btn" onclick="track('cta_email',{name:'${(joseph.name||'').replace(/'/g,"\\'")}'})">✉️&nbsp;Email</a>`:''}
-        </div>
-        <div style="margin-top:16px">
-          <strong>Share or save this listing</strong>
-          <div style="margin-top:8px"><img src="${qrUrl}" alt="QR code for this listing"></div>
-        </div>
-      `;
-
-      agents.forEach(a=>{
+      agents.forEach((a,i)=>{
         const tel = (a.phone||'').replace(/[^0-9+]/g,'');
         const img = a.photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Agent';
         const preview = firstSentence(a.bio);
-        const safeAgentName = (a.name||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;');
         agentCards.innerHTML += `
           <div class="card reveal agent-card">
             <div class="agent-top">
@@ -833,10 +784,7 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
               </div>
             </div>
             ${preview ? `<p class="about-line">${preview}</p>` : `<p style="color:var(--muted);">Agent bio not provided.</p>`}
-            ${a.bio ? `<button class="btn"
-              onclick="openModal('agentModal','<p>${escHTML(a.bio)}</p>'); track('agent_readmore',{name:'${safeAgentName}'})">
-              Read More
-            </button>` : ''}
+            <div id="agent-rm-${i}" class="readmore-slot"></div>
             <div class="agent-actions">
               ${tel?`<a href="tel:${tel}" class="icon-btn" title="Call ${a.name}" onclick="track('agent_call',{name:'${(a.name||'').replace(/'/g,"\\'")}'})">📞&nbsp;Call</a>`:''}
               ${tel?`<a href="sms:${tel}" class="icon-btn" title="Text ${a.name}" onclick="track('agent_text',{name:'${(a.name||'').replace(/'/g,"\\'")}'})">💬&nbsp;Text</a>`:''}
@@ -844,6 +792,9 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
             </div>
           </div>`;
       });
+
+      attachReadMore('agent-rm-0','agentModal',agents[0].bio,'agent_readmore',agents[0].name);
+      attachReadMore('agent-rm-1','agentModal',agents[1].bio,'agent_readmore',agents[1].name);
 
       // Media embeds
       const mediaEmbedsContainer=document.getElementById('mediaEmbeds'); mediaEmbedsContainer.innerHTML='';
@@ -857,8 +808,7 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
             <h3>Pre Dry Wall Matterport</h3>
             <div class="embed">
               <iframe src="${pre}" title="Pre Dry Wall Matterport"
-                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen
-                onload="track('matterport_load',{type:'pre'})"></iframe>
+                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen></iframe>
             </div>
           </div>`);
       }
@@ -868,8 +818,7 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
             <h3>Final Matterport</h3>
             <div class="embed">
               <iframe src="${fin}" title="Final Matterport"
-                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen
-                onload="track('matterport_load',{type:'final'})"></iframe>
+                allow="xr-spatial-tracking; gyroscope; accelerometer; fullscreen" allowfullscreen></iframe>
             </div>
           </div>`);
       }
@@ -878,7 +827,7 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
         html += `
           <div class="card reveal marketing-video">
             <h3>Video Tour</h3>
-            <div class="embed"><iframe src="${vid}" title="Marketing Video" allow="autoplay; fullscreen" allowfullscreen onload="track('video_load')"></iframe></div>
+            <div class="embed"><iframe src="${vid}" title="Marketing Video" allow="autoplay; fullscreen" allowfullscreen></iframe></div>
           </div>`;
       }
       mediaEmbedsContainer.innerHTML = html || `<div class="card reveal"><p style="text-align:center;color:var(--muted);">No media embeds available for this property.</p></div>`;
@@ -918,26 +867,20 @@ you got it! here’s the **fully refreshed `index.html`** with the “Read More�
         }
       }
     });
-
-    // CTA button wiring
-    document.getElementById('ctaBtn').addEventListener('click', ()=>{
-      openModal('ctaModal', document.getElementById('ctaBody').innerHTML);
-      track('cta_open');
-    });
   </script>
 
   <!-- LeadConnector Chat Widget -->
   <script>
     (function(){
       window.LC_API=window.LC_API||{};
-      window.LC_API.on_after_load=function(){ if(window.LC_API && typeof window.LC_API.open_chat==="function"){ window.LC_API.open_chat(); } };
+      window.LC_API.on_after_load=function(){ if(window.LC_API && typeof window.LC_API.open_chat==="function"){ try{window.LC_API.open_chat();}catch(e){} } };
       var s=document.createElement("script");
       s.src="https://beta.leadconnectorhq.com/loader.js"; s.async=true;
       s.setAttribute("data-resources-url","https://beta.leadconnectorhq.com/chat-widget/loader.js");
       s.setAttribute("data-widget-id","68ae95eb6d8a7f8237ababc5");
       document.body.appendChild(s);
       var tries=0,max=200; var poll=setInterval(function(){
-        tries++; if(window.LC_API && typeof window.LC_API.open_chat==="function"){ try{window.LC_API.open_chat();}catch(e){} clearInterval(poll); }
+        tries++; if(window.LC_API && typeof window.LC_API.open_chat==="function"){ clearInterval(poll); }
         if(tries>=max) clearInterval(poll);
       },50);
     })();
