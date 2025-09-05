@@ -1,23 +1,60 @@
 // netlify/functions/project.js
 export async function handler(event) {
   try {
-    const { slug } = Object.fromEntries(new URLSearchParams(event.queryStringParameters));
+    const params = new URLSearchParams(event.queryStringParameters);
+    const slug = (params.get("slug") || "").trim();
     if (!slug) return resp(400, { error: "Missing 'slug' query param" });
 
     const apiKey = process.env.AIRTABLE_API_KEY;
     const baseId = process.env.AIRTABLE_BASE_ID;
-    const table = process.env.AIRTABLE_TABLE || "Projects";
+    const table  = process.env.AIRTABLE_TABLE || "Projects";
     if (!apiKey || !baseId) {
       return resp(500, { error: "Missing Airtable env vars (AIRTABLE_API_KEY, AIRTABLE_BASE_ID)" });
     }
 
-    // Match either {Slug} or {Project Name}
-    const formula = `OR({Slug}='${escapeAirtable(slug)}',{Project Name}='${escapeAirtable(slug)}')`;
-    const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
+    const headers = { Authorization: `Bearer ${apiKey}` };
+    const baseUrl = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`;
 
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${apiKey}` }
-    });
+    // ---------- tolerant query values ----------
+    const raw = String(slug).trim();
+    const q   = raw.toLowerCase();   // simple lower
+    const qf  = fold(q);             // remove common separators
+
+    // Field expressions (coerce to text with &'')
+    const fSlug = "LOWER({Slug}&'')";
+    const fName = "LOWER({Project Name}&'')";
+    const fId   = "LOWER({ProjectID}&'')";
+
+    // "Folded" fields (strip separators inside Airtable)
+    const norm = (fld) =>
+      `LOWER(` +
+        `SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), ',',''), '(', ''), ')',''))`;
+
+    const nSlug = norm("{Slug}");
+    const nName = norm("{Project Name}");
+    const nId   = norm("{ProjectID}");
+
+    // Single robust filter formula (exact + folded exact + contains on both)
+    const formula = `OR(
+      ${fSlug}='${escapeAirtable(q)}',
+      ${fName}='${escapeAirtable(q)}',
+      ${fId}  ='${escapeAirtable(q)}',
+
+      ${nSlug}='${escapeAirtable(qf)}',
+      ${nName}='${escapeAirtable(qf)}',
+      ${nId}  ='${escapeAirtable(qf)}',
+
+      SEARCH('${escapeAirtable(q)}',  ${fSlug})>0,
+      SEARCH('${escapeAirtable(q)}',  ${fName})>0,
+      SEARCH('${escapeAirtable(q)}',  ${fId})>0,
+
+      SEARCH('${escapeAirtable(qf)}', ${nSlug})>0,
+      SEARCH('${escapeAirtable(qf)}', ${nName})>0,
+      SEARCH('${escapeAirtable(qf)}', ${nId})>0
+    )`;
+
+    const url = `${baseUrl}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
+    const res = await fetch(url, { headers });
 
     if (!res.ok) {
       const t = await res.text();
@@ -25,14 +62,18 @@ export async function handler(event) {
     }
 
     const json = await res.json();
-    if (!json.records || json.records.length === 0) {
-      return resp(404, { error: "No record found for that slug" });
+    let rec = json.records && json.records[0];
+
+    // Final fallback: scan up to 1000 records in-code (very forgiving)
+    if (!rec) {
+      const all = await fetchAll(baseUrl, headers, 200, 1000);
+      rec = all.find(r => recordMatches(r.fields, q, qf));
+      if (!rec) return resp(404, { error: "No record found for that slug" });
     }
 
-    const rec = json.records[0];
     const f = rec.fields;
 
-    // Normalize fields to what index.html expects
+    // ---------- normalize output to what index.html expects ----------
     const project = {
       "Project Name": f["Project Name"] || f["Name"] || "",
       "Address": f["Address"] || "",
@@ -46,16 +87,16 @@ export async function handler(event) {
       "HeroImageURL": firstAssetUrl(f["HeroImageURL"], f["Hero Image"], f["Hero"]) || "",
       "GalleryURLsCSV": toCsvUrls(f["GalleryURLsCSV"], f["Gallery"], f["Photos"]) || "",
 
-      // ===== BUILDER (added the specific fields you’re using) =====
+      // ===== BUILDER (specific fields you’re using) =====
       "Builder Owners": toCsvText(f["Builder Owners"]),
       "Builder Photo": toCsvUrls(f["Builder Photo"], f["Builder Photos"]) || "",
       "Builder Owner Titles": toCsvText(f["Builder Owner Titles"]),
-      "Builder Latrice": f["Builder Latrice"] || "", // name (full)
-      "Builder JT": f["Builder JT"] || "",           // name (full)
-      "About Latrice": f["About Latrice"] || "",     // bio
-      "About JT": f["About JT"] || "",               // bio
+      "Builder Latrice": f["Builder Latrice"] || "",
+      "Builder JT": f["Builder JT"] || "",
+      "About Latrice": f["About Latrice"] || "",
+      "About JT": f["About JT"] || "",
 
-      // ===== HIGHLIGHTS & AMENITIES (added) =====
+      // ===== HIGHLIGHTS & AMENITIES =====
       "Highlights": f["Highlights"] || f["Project Highlights"] || f["Property Highlights"] || "",
       "Amenities":  f["Amenities"]  || f["Project Amenities"]  || f["Property Amenities"]  || "",
 
@@ -65,7 +106,7 @@ export async function handler(event) {
       "Pre Dry Wall Matterport": f["Pre Dry Wall Matterport"] || f["PreDrywall Matterport"] || "",
       "Final Matterport": f["Final Matterport"] || "",
 
-      // Listing Agents (Joseph = first, Cliff = second handled in the frontend)
+      // ===== Listing Agents =====
       "Listing Agent 2": toCsvText(f["Listing Agent 2"] || f["Listing Agents"]),
       "Agent Photo": toCsvUrls(f["Agent Photo"], f["Agent Photos"]) || "",
       "Agent Phone Number": toCsvText(f["Agent Phone Number"]),
@@ -88,16 +129,57 @@ export async function handler(event) {
 function resp(status, body) {
   return {
     statusCode: status,
-    headers: {
-      "Content-Type": "application/json",
-      "Access-Control-Allow-Origin": "*"
-    },
+    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
     body: JSON.stringify(body)
   };
 }
 
+// Escape single quotes for Airtable formula
 function escapeAirtable(str) {
   return String(str).replace(/'/g, "\\'");
+}
+
+// Remove common separators/punctuation for our "folded" comparison
+function fold(s) {
+  return String(s)
+    .toLowerCase()
+    .replace(/[\s_\-\/\.,'’–—(),]/g, "");
+}
+
+// Fetch all records up to a cap
+async function fetchAll(baseUrl, headers, pageSize = 100, cap = 1000) {
+  let offset = null, all = [];
+  do {
+    const url = new URL(baseUrl);
+    url.searchParams.set("pageSize", String(pageSize));
+    if (offset) url.searchParams.set("offset", offset);
+    const r = await fetch(url.toString(), { headers });
+    if (!r.ok) throw new Error(`Airtable paging failed: ${r.status}`);
+    const j = await r.json();
+    all = all.concat(j.records || []);
+    offset = j.offset;
+  } while (offset && all.length < cap);
+  return all;
+}
+
+// Very forgiving match check in JS
+function recordMatches(fields, q, qf) {
+  const vals = [
+    fields["Slug"], fields["Project Name"], fields["ProjectID"]
+  ].map(v => (v == null ? "" : String(v)));
+
+  const lowered = vals.map(v => v.toLowerCase());
+  const folded  = lowered.map(v => fold(v));
+
+  // exact lower
+  if (lowered.some(v => v === q)) return true;
+  // exact folded
+  if (folded.some(v => v === qf)) return true;
+  // contains
+  if (lowered.some(v => v.includes(q))) return true;
+  if (folded.some(v => v.includes(qf))) return true;
+
+  return false;
 }
 
 // If a field is an attachment array, return first url; if it's a string, return it; else ""
