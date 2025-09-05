@@ -6,16 +6,19 @@ export async function handler(event) {
 
     const apiKey = process.env.AIRTABLE_API_KEY;
     const baseId = process.env.AIRTABLE_BASE_ID;
-    const table  = process.env.AIRTABLE_TABLE || "Projects";
+    const table = process.env.AIRTABLE_TABLE || "Projects";
     if (!apiKey || !baseId) {
       return resp(500, { error: "Missing Airtable env vars (AIRTABLE_API_KEY, AIRTABLE_BASE_ID)" });
     }
 
     // Match either {Slug} or {Project Name}
-    const formula = OR({Slug}='${escapeAirtable(slug)}',{Project Name}='${escapeAirtable(slug)}');
-    const url = https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)};
+    const formula = `OR({Slug}='${escapeAirtable(slug)}',{Project Name}='${escapeAirtable(slug)}')`;
+    const url = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
 
-    const res = await fetch(url, { headers: { Authorization: Bearer ${apiKey} } });
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${apiKey}` }
+    });
+
     if (!res.ok) {
       const t = await res.text();
       return resp(res.status, { error: "Airtable request failed", details: t });
@@ -47,10 +50,10 @@ export async function handler(event) {
       "Builder Owners": toCsvText(f["Builder Owners"]),
       "Builder Photo": toCsvUrls(f["Builder Photo"], f["Builder Photos"]) || "",
       "Builder Owner Titles": toCsvText(f["Builder Owner Titles"]),
-      "Builder Latrice": f["Builder Latrice"] || "",     // name (full)
-      "Builder JT": f["Builder JT"] || "",               // name (full)
-      "About Latrice": f["About Latrice"] || "",         // bio
-      "About JT": f["About JT"] || "",                   // bio
+      "Builder Latrice": f["Builder Latrice"] || "", // name (full)
+      "Builder JT": f["Builder JT"] || "",           // name (full)
+      "About Latrice": f["About Latrice"] || "",     // bio
+      "About JT": f["About JT"] || "",               // bio
 
       // ===== HIGHLIGHTS & AMENITIES (added) =====
       "Highlights": f["Highlights"] || f["Project Highlights"] || f["Property Highlights"] || "",
@@ -81,7 +84,7 @@ export async function handler(event) {
   }
 }
 
-// ----------------- Utilities -----------------
+/* ----------------- Utilities ----------------- */
 function resp(status, body) {
   return {
     statusCode: status,
