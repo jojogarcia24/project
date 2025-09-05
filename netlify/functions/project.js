@@ -1,8 +1,10 @@
 // netlify/functions/project.js
 export async function handler(event) {
+  const startedAt = Date.now();
   try {
-    const params = new URLSearchParams(event.queryStringParameters);
+    const params = new URLSearchParams(event.queryStringParameters || {});
     const slug = (params.get("slug") || "").trim();
+    const debug = params.get("debug") === "1";
     if (!slug) return resp(400, { error: "Missing 'slug' query param" });
 
     const apiKey = process.env.AIRTABLE_API_KEY;
@@ -16,9 +18,9 @@ export async function handler(event) {
     const baseUrl = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`;
 
     // ---------- tolerant query values ----------
-    const raw = String(slug).trim();
-    const q   = raw.toLowerCase();   // simple lower
-    const qf  = fold(q);             // remove common separators
+    const raw = String(slug);
+    const q   = raw.toLowerCase(); // simple lower
+    const qf  = fold(q);           // remove common separators
 
     // Field expressions (coerce to text with &'')
     const fSlug = "LOWER({Slug}&'')";
@@ -29,7 +31,7 @@ export async function handler(event) {
     const norm = (fld) =>
       `LOWER(` +
         `SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(` +
-          `SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), '(' , ''), ')' , '' )` +
+          `SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), '(' , '' )` +
       `)`;
 
     const nSlug = norm("{Slug}");
@@ -37,50 +39,67 @@ export async function handler(event) {
     const nId   = norm("{ProjectID}");
 
     // Robust filter: exact lower + exact folded + contains on both
-    const formula = `OR(
-      ${fSlug}='${escapeAirtable(q)}',
-      ${fName}='${escapeAirtable(q)}',
-      ${fId}  ='${escapeAirtable(q)}',
+    const formula =
+      `OR(` +
+        `${fSlug}='${escapeAirtable(q)}',` +
+        `${fName}='${escapeAirtable(q)}',` +
+        `${fId}  ='${escapeAirtable(q)}',` +
+        `${nSlug}='${escapeAirtable(qf)}',` +
+        `${nName}='${escapeAirtable(qf)}',` +
+        `${nId}  ='${escapeAirtable(qf)}',` +
+        `SEARCH('${escapeAirtable(q)}',  ${fSlug})>0,` +
+        `SEARCH('${escapeAirtable(q)}',  ${fName})>0,` +
+        `SEARCH('${escapeAirtable(q)}',  ${fId})>0,` +
+        `SEARCH('${escapeAirtable(qf)}', ${nSlug})>0,` +
+        `SEARCH('${escapeAirtable(qf)}', ${nName})>0,` +
+        `SEARCH('${escapeAirtable(qf)}', ${nId})>0` +
+      `)`;
 
-      ${nSlug}='${escapeAirtable(qf)}',
-      ${nName}='${escapeAirtable(qf)}',
-      ${nId}  ='${escapeAirtable(qf)}',
+    let matched = null;
+    let mode = "formula";
+    let fetchStatus = null;
+    let fetchText = null;
 
-      SEARCH('${escapeAirtable(q)}',  ${fSlug})>0,
-      SEARCH('${escapeAirtable(q)}',  ${fName})>0,
-      SEARCH('${escapeAirtable(q)}',  ${fId})>0,
-
-      SEARCH('${escapeAirtable(qf)}', ${nSlug})>0,
-      SEARCH('${escapeAirtable(qf)}', ${nName})>0,
-      SEARCH('${escapeAirtable(qf)}', ${nId})>0
-    )`;
-
-    // Try filterByFormula first
-    let rec = null;
+    // --- Try filterByFormula first
     try {
       const url = `${baseUrl}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
-      const res = await fetch(url, { headers });
-      if (res.ok) {
-        const json = await res.json();
-        rec = json.records && json.records[0] ? json.records[0] : null;
-      } else if (res.status !== 422) {
-        // non-formula error → bubble up
-        const t = await res.text();
-        return resp(res.status, { error: "Airtable request failed", details: t });
+      const r = await fetch(url, { headers });
+      fetchStatus = r.status;
+      if (r.ok) {
+        const j = await r.json();
+        matched = (j.records && j.records[0]) || null;
+      } else if (r.status !== 422) {
+        // 422 = formula parse error — we'll fall back to scan; anything else we surface
+        fetchText = await r.text();
+        if (debug) {
+          return resp(r.status, {
+            error: "Airtable request failed",
+            details: fetchText,
+            debug: { q, qf, formula, status: r.status, ms: Date.now() - startedAt }
+          });
+        }
+        return resp(r.status, { error: "Airtable request failed" });
       }
-      // if 422 or no record, we fall through to fallback scan
-    } catch (_) {
-      // network or parsing – fall through to fallback scan
+    } catch (e) {
+      // Network or other error — continue to fallback scan
+      if (debug) console.error("Formula fetch failed:", e);
     }
 
-    // Final fallback: scan up to 1000 records in-code (very forgiving)
-    if (!rec) {
-      const all = await fetchAll(baseUrl, headers, 200, 1000);
-      rec = all.find(r => recordMatches(r.fields, q, qf));
-      if (!rec) return resp(404, { error: "No record found for that slug" });
+    // --- Fallback scan (safe limits to avoid timeouts)
+    if (!matched) {
+      mode = "fallback-scan";
+      const all = await fetchAll(baseUrl, headers, 120, 720); // up to ~720 records
+      matched = all.find(r => recordMatches(r.fields, q, qf)) || null;
     }
 
-    const f = rec.fields;
+    if (!matched) {
+      return resp(404, {
+        error: "No record found for that slug",
+        debug: debug ? { q, qf, mode, formula, fetchStatus, ms: Date.now() - startedAt } : undefined
+      });
+    }
+
+    const f = matched.fields;
 
     // ---------- normalize output to what index.html expects ----------
     const project = {
@@ -128,8 +147,12 @@ export async function handler(event) {
       "Longitude": f["Longitude"] || (f["Location"] && f["Location"].longitude) || null
     };
 
-    return resp(200, { project });
+    return resp(200, {
+      project,
+      debug: debug ? { mode, formula, q, qf, fetchStatus, ms: Date.now() - startedAt } : undefined
+    });
   } catch (e) {
+    console.error("Function error:", e);
     return resp(500, { error: "Server error", details: String(e) });
   }
 }
@@ -143,7 +166,7 @@ function resp(status, body) {
   };
 }
 
-// Escape single quotes for Airtable formula: ' → ''
+// Escape single quotes for Airtable formula: ' -> ''
 function escapeAirtable(str) {
   return String(str).replace(/'/g, "''");
 }
@@ -155,15 +178,18 @@ function fold(s) {
     .replace(/[\s_\-\/\.,'’–—(),]/g, "");
 }
 
-// Fetch all records up to a cap
-async function fetchAll(baseUrl, headers, pageSize = 100, cap = 1000) {
+// Fetch all records up to a cap (safe defaults)
+async function fetchAll(baseUrl, headers, pageSize = 100, cap = 720) {
   let offset = null, all = [];
   do {
     const url = new URL(baseUrl);
     url.searchParams.set("pageSize", String(pageSize));
     if (offset) url.searchParams.set("offset", offset);
     const r = await fetch(url.toString(), { headers });
-    if (!r.ok) throw new Error(`Airtable paging failed: ${r.status}`);
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`Airtable paging failed: ${r.status} ${t}`);
+    }
     const j = await r.json();
     all = all.concat(j.records || []);
     offset = j.offset;
