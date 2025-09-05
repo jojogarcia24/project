@@ -28,13 +28,15 @@ export async function handler(event) {
     // "Folded" fields (strip separators inside Airtable)
     const norm = (fld) =>
       `LOWER(` +
-        `SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), ',',''), '(', ''), ')',''))`;
+        `SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(` +
+          `SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), '(' , ''), ')' , '' )` +
+      `)`;
 
     const nSlug = norm("{Slug}");
     const nName = norm("{Project Name}");
     const nId   = norm("{ProjectID}");
 
-    // Single robust filter formula (exact + folded exact + contains on both)
+    // Robust filter: exact lower + exact folded + contains on both
     const formula = `OR(
       ${fSlug}='${escapeAirtable(q)}',
       ${fName}='${escapeAirtable(q)}',
@@ -53,16 +55,23 @@ export async function handler(event) {
       SEARCH('${escapeAirtable(qf)}', ${nId})>0
     )`;
 
-    const url = `${baseUrl}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
-    const res = await fetch(url, { headers });
-
-    if (!res.ok) {
-      const t = await res.text();
-      return resp(res.status, { error: "Airtable request failed", details: t });
+    // Try filterByFormula first
+    let rec = null;
+    try {
+      const url = `${baseUrl}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)}`;
+      const res = await fetch(url, { headers });
+      if (res.ok) {
+        const json = await res.json();
+        rec = json.records && json.records[0] ? json.records[0] : null;
+      } else if (res.status !== 422) {
+        // non-formula error → bubble up
+        const t = await res.text();
+        return resp(res.status, { error: "Airtable request failed", details: t });
+      }
+      // if 422 or no record, we fall through to fallback scan
+    } catch (_) {
+      // network or parsing – fall through to fallback scan
     }
-
-    const json = await res.json();
-    let rec = json.records && json.records[0];
 
     // Final fallback: scan up to 1000 records in-code (very forgiving)
     if (!rec) {
@@ -87,7 +96,7 @@ export async function handler(event) {
       "HeroImageURL": firstAssetUrl(f["HeroImageURL"], f["Hero Image"], f["Hero"]) || "",
       "GalleryURLsCSV": toCsvUrls(f["GalleryURLsCSV"], f["Gallery"], f["Photos"]) || "",
 
-      // ===== BUILDER (specific fields you’re using) =====
+      // ===== BUILDER =====
       "Builder Owners": toCsvText(f["Builder Owners"]),
       "Builder Photo": toCsvUrls(f["Builder Photo"], f["Builder Photos"]) || "",
       "Builder Owner Titles": toCsvText(f["Builder Owner Titles"]),
@@ -134,9 +143,9 @@ function resp(status, body) {
   };
 }
 
-// Escape single quotes for Airtable formula
+// Escape single quotes for Airtable formula: ' → ''
 function escapeAirtable(str) {
-  return String(str).replace(/'/g, "\\'");
+  return String(str).replace(/'/g, "''");
 }
 
 // Remove common separators/punctuation for our "folded" comparison
