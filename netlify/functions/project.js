@@ -1,9 +1,7 @@
 // netlify/functions/project.js
 export async function handler(event) {
   try {
-    const params = new URLSearchParams(event.queryStringParameters);
-    const slug = (params.get("slug") || "").trim();
-    const debug = params.get("debug") === "1";
+    const { slug } = Object.fromEntries(new URLSearchParams(event.queryStringParameters));
     if (!slug) return resp(400, { error: "Missing 'slug' query param" });
 
     const apiKey = process.env.AIRTABLE_API_KEY;
@@ -13,76 +11,25 @@ export async function handler(event) {
       return resp(500, { error: "Missing Airtable env vars (AIRTABLE_API_KEY, AIRTABLE_BASE_ID)" });
     }
 
-    const headers = { Authorization: `Bearer ${apiKey}` };
-    const baseUrl = `https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}`;
+    // Match either {Slug} or {Project Name}
+    const formula = OR({Slug}='${escapeAirtable(slug)}',{Project Name}='${escapeAirtable(slug)}');
+    const url = https://api.airtable.com/v0/${baseId}/${encodeURIComponent(table)}?maxRecords=1&filterByFormula=${encodeURIComponent(formula)};
 
-    // ---------- build tolerant queries ----------
-    const raw = String(slug).trim();
-    const q   = raw.toLowerCase();
-    const qf  = fold(q);         // remove separators
-    const qr  = escapeRegex(q);
-    const qfr = escapeRegex(qf);
-
-    // Field expressions (coerce to text with &'')
-    const fSlug = "LOWER({Slug}&'')";
-    const fName = "LOWER({Project Name}&'')";
-    const fId   = "LOWER({ProjectID}&'')";
-
-    // "Folded" (remove separators inside Airtable)
-    const norm = (fld) =>
-      `LOWER(` +
-        `SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(SUBSTITUTE(${fld}&'', ' ', ''), '-', ''), '_', ''), '/', ''), '.', ''), '’',''), '''',''), ',',''), '(', ''), ')',''))`;
-
-    const nSlug = norm("{Slug}");
-    const nName = norm("{Project Name}");
-    const nId   = norm("{ProjectID}");
-
-    const formulas = [
-      // exact (lowercased)
-      `OR(${fSlug}='${escapeAirtable(q)}', ${fName}='${escapeAirtable(q)}', ${fId}='${escapeAirtable(q)}')`,
-      // exact (folded)
-      `OR(${nSlug}='${escapeAirtable(qf)}', ${nName}='${escapeAirtable(qf)}', ${nId}='${escapeAirtable(qf)}')`,
-      // regex contains (normal + folded)
-      `OR(REGEX_MATCH(${fSlug}, '${escapeAirtable(qr)}'), REGEX_MATCH(${fName}, '${escapeAirtable(qr)}'), REGEX_MATCH(${fId}, '${escapeAirtable(qr)}'))`,
-      `OR(REGEX_MATCH(${nSlug}, '${escapeAirtable(qfr)}'), REGEX_MATCH(${nName}, '${escapeAirtable(qfr)}'), REGEX_MATCH(${nId}, '${escapeAirtable(qfr)}'))`,
-      // SEARCH contains (case-insensitive, guard with >0)
-      `OR(SEARCH('${escapeAirtable(q)}', ${fSlug})>0, SEARCH('${escapeAirtable(q)}', ${fName})>0, SEARCH('${escapeAirtable(q)}', ${fId})>0)`,
-      `OR(SEARCH('${escapeAirtable(qf)}', ${nSlug})>0, SEARCH('${escapeAirtable(qf)}', ${nName})>0, SEARCH('${escapeAirtable(qf)}', ${nId})>0)`
-    ];
-
-    // Try formulas in order
-    let matched = null;
-    let matchedBy = "none";
-    const tried = [];
-    for (const f of formulas) {
-      tried.push(f);
-      const url = `${baseUrl}?maxRecords=1&filterByFormula=${encodeURIComponent(f)}`;
-      const r = await fetch(url, { headers });
-      if (!r.ok) {
-        const t = await r.text();
-        return resp(r.status, { error: "Airtable request failed", details: t, debug: debug ? { q, qf, f } : undefined });
-      }
-      const j = await r.json();
-      if (j.records && j.records.length) { matched = j.records[0]; matchedBy = "formula"; break; }
+    const res = await fetch(url, { headers: { Authorization: Bearer ${apiKey} } });
+    if (!res.ok) {
+      const t = await res.text();
+      return resp(res.status, { error: "Airtable request failed", details: t });
     }
 
-    // Final fallback: paginate and match server-side (up to 1000)
-    if (!matched) {
-      const all = await fetchAll(baseUrl, headers, 200, 1000);
-      const rec = all.find(r => recordMatches(r.fields, q, qf));
-      if (rec) { matched = rec; matchedBy = "fallback-scan"; }
+    const json = await res.json();
+    if (!json.records || json.records.length === 0) {
+      return resp(404, { error: "No record found for that slug" });
     }
 
-    if (!matched) {
-      return resp(404, {
-        error: "No record found for that slug",
-        debug: debug ? { q, qf, tried } : undefined
-      });
-    }
+    const rec = json.records[0];
+    const f = rec.fields;
 
-    const f = matched.fields;
-
-    // ---------- normalize output ----------
+    // Normalize fields to what index.html expects
     const project = {
       "Project Name": f["Project Name"] || f["Name"] || "",
       "Address": f["Address"] || "",
@@ -96,16 +43,16 @@ export async function handler(event) {
       "HeroImageURL": firstAssetUrl(f["HeroImageURL"], f["Hero Image"], f["Hero"]) || "",
       "GalleryURLsCSV": toCsvUrls(f["GalleryURLsCSV"], f["Gallery"], f["Photos"]) || "",
 
-      // Builders
+      // ===== BUILDER (added the specific fields you’re using) =====
       "Builder Owners": toCsvText(f["Builder Owners"]),
       "Builder Photo": toCsvUrls(f["Builder Photo"], f["Builder Photos"]) || "",
       "Builder Owner Titles": toCsvText(f["Builder Owner Titles"]),
-      "Builder Latrice": f["Builder Latrice"] || "",
-      "Builder JT": f["Builder JT"] || "",
-      "About Latrice": f["About Latrice"] || "",
-      "About JT": f["About JT"] || "",
+      "Builder Latrice": f["Builder Latrice"] || "",     // name (full)
+      "Builder JT": f["Builder JT"] || "",               // name (full)
+      "About Latrice": f["About Latrice"] || "",         // bio
+      "About JT": f["About JT"] || "",                   // bio
 
-      // Highlights & Amenities
+      // ===== HIGHLIGHTS & AMENITIES (added) =====
       "Highlights": f["Highlights"] || f["Project Highlights"] || f["Property Highlights"] || "",
       "Amenities":  f["Amenities"]  || f["Project Amenities"]  || f["Property Amenities"]  || "",
 
@@ -115,7 +62,7 @@ export async function handler(event) {
       "Pre Dry Wall Matterport": f["Pre Dry Wall Matterport"] || f["PreDrywall Matterport"] || "",
       "Final Matterport": f["Final Matterport"] || "",
 
-      // Agents
+      // Listing Agents (Joseph = first, Cliff = second handled in the frontend)
       "Listing Agent 2": toCsvText(f["Listing Agent 2"] || f["Listing Agents"]),
       "Agent Photo": toCsvUrls(f["Agent Photo"], f["Agent Photos"]) || "",
       "Agent Phone Number": toCsvText(f["Agent Phone Number"]),
@@ -128,18 +75,20 @@ export async function handler(event) {
       "Longitude": f["Longitude"] || (f["Location"] && f["Location"].longitude) || null
     };
 
-    return resp(200, { project, debug: debug ? { matchedBy } : undefined });
+    return resp(200, { project });
   } catch (e) {
     return resp(500, { error: "Server error", details: String(e) });
   }
 }
 
-/* ---------------- utilities ---------------- */
-
+// ----------------- Utilities -----------------
 function resp(status, body) {
   return {
     statusCode: status,
-    headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+    headers: {
+      "Content-Type": "application/json",
+      "Access-Control-Allow-Origin": "*"
+    },
     body: JSON.stringify(body)
   };
 }
@@ -148,16 +97,7 @@ function escapeAirtable(str) {
   return String(str).replace(/'/g, "\\'");
 }
 
-// remove common separators/punctuation
-function fold(s) {
-  return String(s).toLowerCase().replace(/[\s_\-\/\.,'’–—(),]/g, "");
-}
-
-// regex-safe
-function escapeRegex(s) {
-  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
+// If a field is an attachment array, return first url; if it's a string, return it; else ""
 function firstAssetUrl(...candidates) {
   for (const c of candidates) {
     if (!c) continue;
@@ -167,71 +107,42 @@ function firstAssetUrl(...candidates) {
   return "";
 }
 
+// Convert attachment arrays or arrays of strings into a CSV of URLs
 function toCsvUrls(...candidates) {
   for (const c of candidates) {
     if (!c) continue;
     if (typeof c === "string") return c;
     if (Array.isArray(c)) {
-      const urls = c.map(x => (x && x.url) ? x.url : (typeof x === "string" ? x : null)).filter(Boolean);
+      const urls = c
+        .map(x => (x && x.url) ? x.url : (typeof x === "string" ? x : null))
+        .filter(Boolean);
       if (urls.length) return urls.join(", ");
     }
   }
   return "";
 }
 
+// Convert arrays (strings/links/rollups) into CSV of text
 function toCsvText(val) {
   if (!val) return "";
   if (typeof val === "string") return val;
   if (Array.isArray(val)) {
     return val
-      .map(x => x == null ? "" :
+      .map(x =>
+        x == null ? "" :
         typeof x === "string" ? x :
         (x && x.name) ? x.name :
-        (x && x.text) ? x.text : String(x))
+        (x && x.text) ? x.text : String(x)
+      )
       .filter(Boolean)
       .join(", ");
   }
   return String(val);
 }
 
+// Return first attachment url if exists
 function fileUrl(field) {
   if (Array.isArray(field) && field.length && field[0].url) return field[0].url;
   if (typeof field === "string") return field;
   return "";
-}
-
-// fetch all records up to cap
-async function fetchAll(baseUrl, headers, pageSize = 100, cap = 1000) {
-  let offset = null, all = [];
-  do {
-    const url = new URL(baseUrl);
-    url.searchParams.set("pageSize", String(pageSize));
-    if (offset) url.searchParams.set("offset", offset);
-    const r = await fetch(url.toString(), { headers });
-    if (!r.ok) throw new Error(`Airtable paging failed: ${r.status}`);
-    const j = await r.json();
-    all = all.concat(j.records || []);
-    offset = j.offset;
-  } while (offset && all.length < cap);
-  return all;
-}
-
-// server-side tolerant match
-function recordMatches(fields, q, qf) {
-  const vals = [
-    fields["Slug"], fields["Project Name"], fields["ProjectID"]
-  ].map(v => (v == null ? "" : String(v)));
-
-  const lowered = vals.map(v => v.toLowerCase());
-  const folded  = lowered.map(v => fold(v));
-
-  // exact lower
-  if (lowered.some(v => v === q)) return true;
-  // exact folded
-  if (folded.some(v => v === qf)) return true;
-  // contains
-  if (lowered.some(v => v.includes(q))) return true;
-  if (folded.some(v => v.includes(qf))) return true;
-
-  return false;
 }
