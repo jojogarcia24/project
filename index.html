@@ -798,53 +798,6 @@
         }
       }
 
-        const downloadContract = asText(p['Download Builder Contract Forms']);
-        const fillableContract = asText(p['Fillable Builder Contract']);
-
-        const items = [];
-        if (downloadContract) {
-          items.push({
-            title: 'Download Builder Contract Forms',
-            url: downloadContract,
-            description: 'Download the builder contract packet.'
-          });
-        }
-        if (fillableContract) {
-          items.push({
-            title: 'Fillable Builder Contract',
-            url: fillableContract,
-            description: 'Complete the builder contract online.'
-          });
-        }
-
-        if (!items.length) {
-          // hide the whole card if there’s nothing in Airtable
-          contractsCard.style.display = 'none';
-        } else {
-          contractsCard.style.display = '';
-          items.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'card reveal contract-card';
-            div.innerHTML = `
-              <h4 style="margin-top:0;margin-bottom:10px;">${escHTML(item.title)}</h4>
-              <p style="color:var(--muted);font-size:.95em;margin-top:0;margin-bottom:16px;">
-                ${escHTML(item.description)}
-              </p>
-              <a
-                href="${item.url}"
-                target="_blank"
-                rel="noopener"
-                class="btn"
-                onclick="track('builder_contract_click',{ type: '${item.title.replace(/'/g,"\\'")}' })"
-              >
-                Open
-              </a>
-            `;
-            contractCards.appendChild(div);
-          });
-        }
-      }
-
 
       // Agents (Joseph first, Cliff second)
       const agentCards = document.getElementById('agentCards'); agentCards.innerHTML='';
