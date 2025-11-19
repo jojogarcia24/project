@@ -737,11 +737,66 @@
 
       attachReadMore('builder-rm-0','builderModal',aboutLatrice,'builder_readmore',nameLatrice);
       attachReadMore('builder-rm-1','builderModal',aboutJT,'builder_readmore',nameJT);
-      // Builder contract cards
+           // Builder contract cards
       const contractsCard = document.getElementById('contractsCard');
       const contractCards = document.getElementById('contractCards');
       if (contractsCard && contractCards) {
         contractCards.innerHTML = '';
+
+        const downloadContract = asText(p['Download Builder Contract Forms']);
+        const fillableContract = asText(p['Fillable Builder Contract']);
+
+        const items = [];
+        if (downloadContract) {
+          items.push({
+            title: 'Download Builder Contract Forms',
+            subtitle: 'Download the builder contract packet.',
+            url: downloadContract
+          });
+        }
+        if (fillableContract) {
+          items.push({
+            title: 'Fillable Builder Contract',
+            subtitle: 'Complete the builder contract online.',
+            url: fillableContract
+          });
+        }
+
+        if (!items.length) {
+          // hide the whole section if nothing is set in Airtable
+          contractsCard.style.display = 'none';
+        } else {
+          contractsCard.style.display = '';
+          items.forEach(item => {
+            const div = document.createElement('div');
+            // use agent-card styles so it looks like the Listing Agents cards
+            div.className = 'card reveal agent-card contract-card';
+            div.innerHTML = `
+              <div class="agent-top">
+                <div class="agent-avatar" style="display:flex;align-items:center;justify-content:center;font-size:24px;">
+                  📄
+                </div>
+                <div class="agent-meta">
+                  <div class="agent-name">${escHTML(item.title)}</div>
+                  <div class="agent-tag">${escHTML(item.subtitle)}</div>
+                </div>
+              </div>
+              <div class="agent-actions">
+                <a
+                  href="${item.url}"
+                  target="_blank"
+                  rel="noopener"
+                  class="icon-btn"
+                  onclick="track('builder_contract_click',{ type: '${item.title.replace(/'/g,"\\'")}' })"
+                >
+                  Open
+                </a>
+              </div>
+            `;
+            contractCards.appendChild(div);
+          });
+        }
+      }
 
         const downloadContract = asText(p['Download Builder Contract Forms']);
         const fillableContract = asText(p['Fillable Builder Contract']);
