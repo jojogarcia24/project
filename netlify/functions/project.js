@@ -65,6 +65,11 @@ export async function handler(event) {
       "Pre Dry Wall Matterport": f["Pre Dry Wall Matterport"] || f["PreDrywall Matterport"] || "",
       "Final Matterport": f["Final Matterport"] || "",
 
+            // Builder contracts
+      "Download Builder Contract Forms": fileUrl(f["Download Builder Contract Forms"]) || "",
+      "Fillable Builder Contract": fileUrl(f["Fillable Builder Contract"]) || "",
+
+
       // Listing Agents (Joseph = first, Cliff = second handled in the frontend)
       "Listing Agent 2": toCsvText(f["Listing Agent 2"] || f["Listing Agents"]),
       "Agent Photo": toCsvUrls(f["Agent Photo"], f["Agent Photos"]) || "",
