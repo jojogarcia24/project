@@ -329,11 +329,6 @@
         <div id="map" class="map"></div>
       </div>
 
-      <div class="card reveal">
-        <h3>Builder</h3>
-        <div id="builderCards" class="card-container"></div>
-      </div>
-
       <div class="card reveal" id="contractsCard">
         <h3>📋 Contract Documents</h3>
 
@@ -963,48 +958,7 @@
       if(lbImages.length){updateMainImage(0);} else {mainGalleryImg.src='https://via.placeholder.com/1200x675?text=No+Images+Available';mainGalleryImg.alt='No images available';}
       lbImages.forEach((src,i)=>{const d=document.createElement('div'); d.className='thumb'; d.innerHTML=`<img loading="lazy" src="${src}" alt="Gallery thumbnail ${i+1}">`; galleryThumbsContainer.appendChild(d); d.onclick=()=>openLightbox(i);});
 
-      // Builder cards (Latrice & JT)
-      const builderCardsContainer=document.getElementById('builderCards'); builderCardsContainer.innerHTML='';
-
-      const nameLatrice = asText(getField(p, ['Builder Latrice','Builder 1','Builder Name 1','Builder Owner 1'])).trim() || (asText(getField(p,['Builder Owners'])).split(',')[0]||'').trim();
-      const nameJT      = asText(getField(p, ['Builder JT','Builder 2','Builder Name 2','Builder Owner 2'])).trim()      || (asText(getField(p,['Builder Owners'])).split(',')[1]||'').trim();
-
-      const titlesArr = splitMulti(asText(getField(p, ['Builder Owner Titles','Builder Titles'])));
-      const titleLatrice = (titlesArr[0]||'').trim();
-      const titleJT      = (titlesArr[1]||'').trim();
-
-      const aboutLatrice = asText(getField(p, ['About Latrice'])).trim() || (splitMulti(asText(getField(p,['Builder About'])))[0]||'').trim();
-      const aboutJT      = asText(getField(p, ['About JT'])).trim()      || (splitMulti(asText(getField(p,['Builder About'])))[1]||'').trim();
-
-      const photoLinks = asText(getField(p,['Builder Photo','Builder Photos'])).split(',').map(s=>s.trim()).filter(Boolean);
-      const photoLatrice = (photoLinks.find(u=>/latrice/i.test(u)) || photoLinks[0] || '').trim();
-      const photoJT      = (photoLinks.find(u=>/\bjt\b/i.test(u))   || photoLinks[1] || '').trim();
-
-      function builderCardHTML(name, title, about, photo, idx){
-        const img = photo || 'https://via.placeholder.com/150/1a1a1a/e0e6f0?text=Builder';
-        const titleHTML = title ? `<div class="agent-tag">${title}</div>` : '';
-        const preview = firstSentence(about, 180);
-        return `
-          <div class="card reveal builder-card">
-            <div class="agent-top">
-              <img src="${img}" class="agent-avatar" alt="${name||'Builder'}">
-              <div class="agent-meta">
-                <div class="agent-name">${name||''}</div>
-                ${titleHTML}
-              </div>
-            </div>
-            ${preview ? `<p class="about-line">${preview}</p>` : ''}
-            <div id="builder-rm-${idx}" class="readmore-slot"></div>
-          </div>`;
-      }
-
-      builderCardsContainer.innerHTML =
-        builderCardHTML(nameLatrice, titleLatrice, aboutLatrice, photoLatrice, 0) +
-        builderCardHTML(nameJT,      titleJT,      aboutJT,      photoJT,      1);
-
-      attachReadMore('builder-rm-0','builderModal',aboutLatrice,'builder_readmore',nameLatrice);
-      attachReadMore('builder-rm-1','builderModal',aboutJT,'builder_readmore',nameJT);
-           // Airtable-specific fillable contract (project-specific, optional)
+      // Airtable-specific fillable contract (project-specific, optional)
       const fillableSlot = document.getElementById('fillableContractSlot');
       if (fillableSlot) {
         const fillableContract = asText(p['Fillable Builder Contract']);
