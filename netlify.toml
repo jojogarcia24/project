@@ -1,5 +1,10 @@
+# `publish = "."` served the repository itself, including the serverless function
+# source. The build script is an explicit allow-list of what this site serves;
+# see scripts/netlify-build.sh. `functions` resolves against the repo root rather
+# than the publish directory, so the function itself is unaffected.
 [build]
-  publish = "."
+  publish = "dist"
+  command = "bash scripts/netlify-build.sh dist"
   functions = "netlify/functions"
 
 [functions]
